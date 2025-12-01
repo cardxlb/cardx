@@ -20,20 +20,25 @@ body {
     border-radius: 28px;
     box-shadow: 0 18px 48px rgba(0,0,0,0.18);
 }
+
+/* AUTO-SIZING PROFILE IMAGE */
 img.profile {
     width: 190px;
     height: 190px;
-    border-radius: 32px;
     object-fit: cover;
+    object-position: center;
+    border-radius: 32px;
     display: block;
     margin: 0 auto 22px auto;
     box-shadow: 0 10px 26px rgba(0,0,0,0.25);
 }
+
 h1 {
     font-size: 26px;
     margin: 8px 0 2px;
     font-weight: 700;
 }
+
 h2 {
     font-size: 15px;
     font-weight: 400;
@@ -64,6 +69,7 @@ a.btn {
     transition: all 0.22s ease;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+
 a.btn:hover {
     background: #e7e7ec;
     transform: translateY(-2px);
@@ -87,7 +93,8 @@ a.btn:hover {
 <body>
 
 <div class="container">
-    <img src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/zaher_chatila.jpg" alt="Profile Photo">
+
+    <img class="profile" src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/zaher_chatila.jpg" alt="Profile Photo">
 
     <h1>Zaher Chatila</h1>
 
@@ -120,6 +127,7 @@ a.btn:hover {
         <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
         <span>Location</span>
     </a>
+
 </div>
 
 <div class="footer">
