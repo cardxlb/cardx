@@ -2,248 +2,290 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Mahmoud Chatila – CARDX</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; background: #05060B; }
+/* === NO-SCROLL, PROPORTIONAL LAYOUT === */
+:root{
+  /* Page sizing */
+  --card-w: min(480px, 92vw);
+  --card-h: 92svh;                 /* safe viewport height on iOS */
+  --radius: clamp(22px, 3.2vh, 28px);
+
+  /* Typography */
+  --name-size: clamp(20px, 3.3vh, 28px);
+  --sub-size:  clamp(13px, 2.0vh, 16px);
+
+  /* Image */
+  --img-size: clamp(130px, 22svh, 190px);
+  --img-radius: clamp(22px, 3.8vh, 32px);
+
+  /* Buttons */
+  --btn-max: min(360px, 86%);
+  --btn-pad-y: clamp(12px, 1.8vh, 16px);
+  --btn-pad-x: clamp(16px, 2.4vh, 20px);
+  --btn-gap: clamp(8px, 1.2vh, 12px);
+  --btn-margin: clamp(7px, 1.0vh, 10px);
+
+  /* Colors */
+  --bg: #f3f3f6;
+  --ink: #111;
+  --blue: #3A80F6;
+  --black: #000000;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
 
 body{
+  background: var(--bg);
+  color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: rgba(255,255,255,0.92);
-}
 
-/* BACKGROUND */
-.bg{
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
-    radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
-    linear-gradient(180deg, #05060B, #070914);
-}
-
-/* CENTER THE WHOLE UNIT */
-.page{
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(16px, 3vw, 34px);
+
+  /* Critical: no scroll */
+  overflow: hidden;
+
+  /* Safe area padding for iPhone notch */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* card + footer move together */
-.stack{
+/* Card */
+.container{
+  width: var(--card-w);
+  max-height: var(--card-h);
+
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.18);
+
+  /* Proportional padding */
+  padding: clamp(14px, 2.2vh, 22px) clamp(12px, 2.0vh, 18px);
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+
+  /* Distribute content to fill without overflow */
+  justify-content: space-between;
+
+  /* Extra safety */
+  box-sizing: border-box;
 }
 
-/* RESPONSIVE SCALE (phone -> desktop) */
-:root{
-  /* Card width grows with viewport, capped for desktop */
-  --cardW: min(92vw, 640px);
-
-  /* Spacing & sizing scale */
-  --padX: clamp(16px, 2.2vw, 26px);
-  --padY: clamp(22px, 2.6vw, 34px);
-  --radius: clamp(26px, 2.5vw, 34px);
-
-  --photo: clamp(170px, 20vw, 250px);
-  --photoRadius: clamp(28px, 2.2vw, 36px);
-
-  --h1: clamp(26px, 2.4vw, 36px);
-  --h2: clamp(14px, 1.4vw, 18px);
-
-  --btnHpad: clamp(18px, 2.2vw, 26px);
-  --btnVpad: clamp(14px, 1.6vw, 18px);
-  --btnText: clamp(16px, 1.5vw, 20px);
-  --icon: clamp(22px, 1.8vw, 26px);
+/* Top block */
+.header{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* CARD */
-.container{
-  width: var(--cardW);
-  padding: var(--padY) var(--padX);
-  border-radius: var(--radius);
-  background: rgba(14,16,28,0.80);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 30px 90px rgba(0,0,0,0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  text-align: center;
-  position: relative;
-  overflow: hidden; /* FIX: prevents corner/glow leak */
-}
-
-/* FIX: centered gradient highlight */
-.container::before{
-  content:"";
-  position:absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    700px 340px at 50% 0%,
-    rgba(255,255,255,0.10),
-    transparent 60%
-  );
-  pointer-events:none;
-}
-
-/* PROFILE */
+/* Auto-sizing profile image */
 img.profile{
-  width: var(--photo);
-  height: var(--photo);
-  border-radius: var(--photoRadius);
+  width: var(--img-size);
+  height: var(--img-size);
   object-fit: cover;
+  object-position: center;
+  border-radius: var(--img-radius);
   display: block;
-  margin: 8px auto 18px;
-  box-shadow: 0 18px 60px rgba(0,0,0,0.65);
-  outline: 2px solid rgba(58,128,246,0.75);
-  outline-offset: 7px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
+  margin: 0 0 clamp(10px, 1.6vh, 16px) 0;
 }
 
 h1{
-  margin: 6px 0 6px;
-  font-size: var(--h1);
-  font-weight: 820;
-  letter-spacing: -0.02em;
+  font-size: var(--name-size);
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  text-align: center;
 }
 
 h2{
-  margin: 0 0 22px;
-  font-size: var(--h2);
-  font-weight: 450;
-  color: rgba(255,255,255,0.62);
+  font-size: var(--sub-size);
+  margin: clamp(4px, 0.9vh, 8px) 0 0 0;
+  font-weight: 400;
+  color: #666;
+  text-align: center;
 }
 
-/* BUTTONS */
-a.btn{
-  width: 92%;
-  max-width: 520px; /* grows on desktop */
-  margin: clamp(10px, 1.2vw, 14px) auto;
-  padding: var(--btnVpad) var(--btnHpad);
-
-  display: grid;
-  grid-template-columns: 28px 1fr 28px;
+/* Buttons block */
+.actions{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  margin-top: clamp(10px, 1.6vh, 16px);
+  margin-bottom: clamp(6px, 1.0vh, 10px);
+}
 
-  text-decoration: none;
-  color: rgba(255,255,255,0.94);
+/* PERFECTLY CENTERED BUTTONS */
+a.btn{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
-    rgba(255,255,255,0.05);
+  width: 100%;
+  max-width: var(--btn-max);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  margin: var(--btn-margin) auto;
 
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--black);
+  border: 1px solid var(--blue);
   border-radius: 999px;
 
-  box-shadow: 0 14px 38px rgba(0,0,0,0.55);
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  color: #fff;
+  font-size: clamp(14px, 2.1vh, 16px);
+  text-decoration: none;
+
+  transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20);
+  box-sizing: border-box;
 }
 
 a.btn:hover{
+  background: #0A0A0A;
   transform: translateY(-2px);
-  border-color: rgba(58,128,246,0.85);
-  box-shadow:
-    0 22px 55px rgba(0,0,0,0.70),
-    0 0 0 1px rgba(58,128,246,0.22);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.30);
 }
 
-.icon{
-  justify-self: start;
-  width: var(--icon);
-  height: var(--icon);
-  filter: brightness(0) invert(1);
-  opacity: 0.95;
+.btn-left, .btn-right{
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn span{
-  justify-self: center;
+.btn-center{
+  flex: 1;
   text-align: center;
-  font-size: var(--btnText);
   font-weight: 600;
+  letter-spacing: 0.1px;
 }
 
-/* FOOTER attached */
+/* White icons */
+.icon{
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+  opacity: 1;
+}
+
+/* Invisible placeholder icon for symmetry */
+.icon-placeholder{
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+}
+
+/* Footer */
 .footer{
-  font-size: 12px;
-  color: rgba(255,255,255,0.60);
+  width: 100%;
   text-align: center;
-}
-.footer strong{
-  color: #3A80F6;
-  font-weight: 800;
+  font-size: clamp(11px, 1.6vh, 12px);
+  color: #777;
+  margin-top: clamp(4px, 0.8vh, 8px);
 }
 
-/* OPTIONAL: make desktop view feel more “balanced” vertically */
-@media (min-width: 900px){
-  .stack{ gap: 16px; }
+/* Extra-small height devices (keeps NO scroll) */
+@media (max-height: 700px){
+  :root{
+    --img-size: clamp(110px, 20svh, 160px);
+    --btn-margin: clamp(5px, 0.8vh, 8px);
+  }
 }
 </style>
 </head>
 
 <body>
-<div class="bg"></div>
+  <div class="container">
 
-<main class="page">
-  <div class="stack">
-
-    <div class="container">
+    <div class="header">
       <img
-        src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
         class="profile"
-        alt="Profile Photo"
+        src="https://raw.githubusercontent.com/cardxlb/cardx/main/photo.jpg"
+        alt=""
       />
-
       <h1>Mahmoud Chatila</h1>
       <h2>Chief Executive Officer – Chatila Financial Group</h2>
+    </div>
+
+    <div class="actions">
 
       <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
-        <span>Save Contact</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
+        </span>
+        <span class="btn-center">Save Contact</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
 
       <a class="btn" href="tel:+96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
-        <span>Call</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
+        </span>
+        <span class="btn-center">Call</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
 
       <a class="btn" href="https://wa.me/96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
-        <span>WhatsApp</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
+        </span>
+        <span class="btn-center">WhatsApp</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
 
       <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
-        <span>Email</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
+        </span>
+        <span class="btn-center">Email</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
 
       <a class="btn" href="https://instagram.com/mahmoud__chatila">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
-        <span>Instagram</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
+        </span>
+        <span class="btn-center">Instagram</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
 
       <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
-        <span>Location</span>
-        <span></span>
+        <span class="btn-left">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
+        </span>
+        <span class="btn-center">Location</span>
+        <span class="btn-right">
+          <img class="icon-placeholder" alt="">
+        </span>
       </a>
+
     </div>
 
     <div class="footer">
-      Powered by <strong>CARDX</strong> • A smarter way to connect
+      Powered by CARDX • Smart Digital Identity
     </div>
 
   </div>
-</main>
 </body>
 </html>
