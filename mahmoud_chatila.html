@@ -6,192 +6,206 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; background: #05060B; }
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #05060B;
+}
 
-  body{
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: rgba(255,255,255,0.92);
-  }
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: rgba(255,255,255,0.92);
+}
 
-  /* HARD BACKGROUND */
-  .bg{
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
-      radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
-      linear-gradient(180deg, #05060B, #070914);
-  }
+/* FORCE DARK BACKGROUND */
+.bg{
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
+    radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
+    linear-gradient(180deg, #05060B, #070914);
+}
 
-  .page{
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-  }
+.page{
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
 
-  .container{
-    width: 100%;
-    max-width: 480px;
-    padding: 28px 18px 32px;
-    border-radius: 30px;
-    background: rgba(14,16,28,0.80);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 30px 90px rgba(0,0,0,0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    text-align: center;
-    position: relative;
-  }
+.container{
+  width: 100%;
+  max-width: 480px;
+  padding: 28px 18px 32px;
+  border-radius: 30px;
+  background: rgba(14,16,28,0.80);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  text-align: center;
+  position: relative;
+}
 
-  .container::before{
-    content:"";
-    position:absolute;
-    inset:-2px;
-    background: radial-gradient(600px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
-    pointer-events:none;
-  }
+/* subtle sheen */
+.container::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background: radial-gradient(600px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
+  pointer-events:none;
+}
 
-  img.profile{
-    width: 184px;
-    height: 184px;
-    border-radius: 32px;
-    object-fit: cover;
-    display: block;
-    margin: 8px auto 18px;
-    box-shadow: 0 18px 60px rgba(0,0,0,0.65);
-    outline: 2px solid rgba(58,128,246,0.75);
-    outline-offset: 7px;
-  }
+img.profile{
+  width: 184px;
+  height: 184px;
+  border-radius: 32px;
+  object-fit: cover;
+  display: block;
+  margin: 8px auto 18px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+  outline: 2px solid rgba(58,128,246,0.75);
+  outline-offset: 7px;
+}
 
-  h1{
-    margin: 6px 0 4px;
-    font-size: 28px;
-    font-weight: 780;
-    letter-spacing: -0.02em;
-  }
+h1{
+  margin: 6px 0 4px;
+  font-size: 28px;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
 
-  h2{
-    margin: 0 0 22px;
-    font-size: 15px;
-    font-weight: 450;
-    color: rgba(255,255,255,0.62);
-  }
+h2{
+  margin: 0 0 22px;
+  font-size: 15px;
+  font-weight: 450;
+  color: rgba(255,255,255,0.62);
+}
 
-  /* BUTTONS */
-  a.btn{
-    width: 92%;
-    max-width: 380px;
-    margin: 11px auto;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
+/* BUTTONS — GRID FOR PERFECT CENTERING */
+a.btn{
+  width: 92%;
+  max-width: 380px;
+  margin: 11px auto;
+  padding: 14px 20px;
 
-    text-decoration: none;
-    color: rgba(255,255,255,0.94);
+  display: grid;
+  grid-template-columns: 24px 1fr 24px; /* icon | centered text | balance */
+  align-items: center;
 
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
-      rgba(255,255,255,0.05);
+  text-decoration: none;
+  color: rgba(255,255,255,0.94);
 
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+    rgba(255,255,255,0.05);
 
-    box-shadow: 0 14px 38px rgba(0,0,0,0.55);
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-    position: relative;
-    overflow: hidden;
-  }
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
 
-  a.btn:hover{
-    transform: translateY(-2px);
-    border-color: rgba(58,128,246,0.85);
-    box-shadow:
-      0 22px 55px rgba(0,0,0,0.70),
-      0 0 0 1px rgba(58,128,246,0.22);
-  }
+  box-shadow: 0 14px 38px rgba(0,0,0,0.55);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  position: relative;
+}
 
-  /* ICON LEFT */
-  .icon{
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    filter: brightness(0) invert(1); /* FORCE WHITE */
-    opacity: 0.95;
-  }
+a.btn:hover{
+  transform: translateY(-2px);
+  border-color: rgba(58,128,246,0.85);
+  box-shadow:
+    0 22px 55px rgba(0,0,0,0.70),
+    0 0 0 1px rgba(58,128,246,0.22);
+}
 
-  /* TEXT CENTERED RELATIVE TO BUTTON */
-  .btn span{
-    flex: 1;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 500;
-  }
+/* ICON LEFT */
+.icon{
+  justify-self: start;
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+}
 
-  .footer{
-    margin-top: 18px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.60);
-    text-align: center;
-  }
+/* TEXT PERFECTLY CENTERED */
+.btn span{
+  justify-self: center;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+}
 
-  .footer strong{
-    color: #3A80F6;
-    font-weight: 750;
-  }
+.footer{
+  margin-top: 18px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.60);
+  text-align: center;
+}
+
+.footer strong{
+  color: #3A80F6;
+  font-weight: 750;
+}
 </style>
 </head>
 
 <body>
-  <div class="bg"></div>
+<div class="bg"></div>
 
-  <main class="page">
-    <div class="container">
+<main class="page">
+  <div class="container">
 
-      <img src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
-           class="profile" alt="Profile Photo">
+    <img
+      src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
+      class="profile"
+      alt="Profile Photo"
+    />
 
-      <h1>Mahmoud Chatila</h1>
-      <h2>Chief Executive Officer – Chatila Financial Group</h2>
+    <h1>Mahmoud Chatila</h1>
+    <h2>Chief Executive Officer – Chatila Financial Group</h2>
 
-      <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg">
-        <span>Save Contact</span>
-      </a>
+    <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
+      <span>Save Contact</span>
+      <span></span>
+    </a>
 
-      <a class="btn" href="tel:+96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg">
-        <span>Call</span>
-      </a>
+    <a class="btn" href="tel:+96178929249">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
+      <span>Call</span>
+      <span></span>
+    </a>
 
-      <a class="btn" href="https://wa.me/96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg">
-        <span>WhatsApp</span>
-      </a>
+    <a class="btn" href="https://wa.me/96178929249">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
+      <span>WhatsApp</span>
+      <span></span>
+    </a>
 
-      <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg">
-        <span>Email</span>
-      </a>
+    <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
+      <span>Email</span>
+      <span></span>
+    </a>
 
-      <a class="btn" href="https://instagram.com/mahmoud__chatila">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg">
-        <span>Instagram</span>
-      </a>
+    <a class="btn" href="https://instagram.com/mahmoud__chatila">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
+      <span>Instagram</span>
+      <span></span>
+    </a>
 
-      <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg">
-        <span>Location</span>
-      </a>
+    <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
+      <span>Location</span>
+      <span></span>
+    </a>
 
-    </div>
+  </div>
 
-    <div class="footer">
-      Powered by <strong>CARDX</strong> • A smarter way to connect
-    </div>
-  </main>
+  <div class="footer">
+    Powered by <strong>CARDX</strong> • A smarter way to connect
+  </div>
+</main>
 </body>
 </html>
