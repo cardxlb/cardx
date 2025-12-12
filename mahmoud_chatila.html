@@ -1,169 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mahmoud Chatila – CARDX</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" />
+<title>Mahmoud Chatila – CARDX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <style>
-    /* HARD RESET so hosting/other CSS doesn't mess you up */
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; padding: 0; }
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; padding: 0; background: #05060B; }
 
-    :root{
-      /* Brand */
-      --blue: #3A80F6;
-      --blue-rgb: 58,128,246;
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: rgba(255,255,255,0.92);
+  }
 
-      /* Premium dark palette */
-      --black: #05060B;         /* true deep black */
-      --black-2: #070914;       /* slightly lifted */
-      --card: rgba(14, 16, 28, 0.78);
-      --border: rgba(255,255,255,0.10);
+  /* hard-force the background so no host white shows through */
+  .bg{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
+      radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
+      linear-gradient(180deg, #05060B, #070914);
+  }
 
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.62);
+  .page{
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
 
-      --btn: rgba(255,255,255,0.06);
-      --btn-border: rgba(255,255,255,0.10);
-    }
+  .container{
+    width: 100%;
+    max-width: 480px;
+    padding: 26px 18px 30px;
+    border-radius: 28px;
+    background: rgba(14,16,28,0.78);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 28px 90px rgba(0,0,0,0.70);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
 
-    /* Force dark background EVEN if host injects styles */
-    html { background: var(--black); }
-    body { background: var(--black); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+  /* sheen layer, placed BEHIND content */
+  .container::before{
+    content:"";
+    position:absolute;
+    inset:-2px;
+    z-index: 0;
+    background: radial-gradient(620px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
+    pointer-events:none;
+    opacity: 0.8;
+  }
 
-    /* Fixed background layer prevents any “white page” edges */
-    .bg {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background:
-        radial-gradient(900px 520px at 18% 10%, rgba(var(--blue-rgb), 0.26), transparent 60%),
-        radial-gradient(900px 520px at 82% 18%, rgba(var(--blue-rgb), 0.12), transparent 60%),
-        radial-gradient(700px 420px at 50% 110%, rgba(var(--blue-rgb), 0.10), transparent 60%),
-        linear-gradient(180deg, var(--black), var(--black-2));
-    }
+  /* ensure all content sits ABOVE the sheen */
+  .container > *{ position: relative; z-index: 1; }
 
-    /* True centering */
-    .page {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-    }
+  img.profile{
+    width: 182px;
+    height: 182px;
+    border-radius: 32px;
+    object-fit: cover;
+    display: block;
+    margin: 8px auto 18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+    outline: 2px solid rgba(58,128,246,0.70);
+    outline-offset: 7px;
+  }
 
-    .container{
-      width: 100%;
-      max-width: 480px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      padding: 26px 18px 30px;
-      box-shadow: 0 28px 90px rgba(0,0,0,0.70);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      overflow: hidden;
-      text-align: center;
-      position: relative;
-    }
+  h1{
+    margin: 6px 0 4px;
+    font-size: 28px;
+    font-weight: 780;
+    letter-spacing: -0.02em;
+  }
 
-    /* subtle premium highlight (NOT gray wash) */
-    .container::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background: radial-gradient(600px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
-      pointer-events:none;
-      opacity: 0.7;
-    }
+  h2{
+    margin: 0 0 22px;
+    font-size: 15px;
+    font-weight: 450;
+    color: rgba(255,255,255,0.62);
+  }
 
-    img.profile{
-      width: 182px;
-      height: 182px;
-      border-radius: 32px;
-      object-fit: cover;
-      display: block;
-      margin: 8px auto 18px;
-      box-shadow: 0 18px 60px rgba(0,0,0,0.65);
-      outline: 2px solid rgba(var(--blue-rgb), 0.55);
-      outline-offset: 7px;
-    }
+  a.btn{
+    width: 92%;
+    max-width: 372px;
+    margin: 10px auto;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
 
-    h1{
-      margin: 6px 0 4px;
-      font-size: 28px;
-      font-weight: 780;
-      letter-spacing: -0.02em;
-    }
+    text-decoration: none;
+    color: rgba(255,255,255,0.92);
 
-    h2{
-      margin: 0 0 22px;
-      font-size: 15px;
-      font-weight: 450;
-      color: var(--muted);
-    }
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+      rgba(255,255,255,0.05);
 
-    a.btn{
-      width: 92%;
-      max-width: 372px;
-      margin: 10px auto;
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 11px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 999px;
 
-      text-decoration: none;
-      color: var(--text);
+    box-shadow: 0 14px 38px rgba(0,0,0,0.55);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    position: relative;
+    overflow: hidden;
+  }
 
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
-        var(--btn);
-      border: 1px solid var(--btn-border);
-      border-radius: 999px;
+  a.btn::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: radial-gradient(320px 110px at 20% 10%, rgba(58,128,246,0.38), transparent 60%);
+    opacity: 0;
+    transition: opacity .18s ease;
+    pointer-events:none;
+  }
 
-      box-shadow: 0 14px 38px rgba(0,0,0,0.55);
-      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-      position: relative;
-      overflow: hidden;
-    }
+  a.btn:hover{
+    transform: translateY(-2px);
+    border-color: rgba(58,128,246,0.85);
+    box-shadow:
+      0 22px 55px rgba(0,0,0,0.70),
+      0 0 0 1px rgba(58,128,246,0.20);
+  }
 
-    /* Electric-blue “premium glow” on interaction */
-    a.btn::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background: radial-gradient(320px 110px at 20% 10%, rgba(var(--blue-rgb),0.34), transparent 60%);
-      opacity: 0;
-      transition: opacity .18s ease;
-      pointer-events:none;
-    }
+  a.btn:hover::before{ opacity: 1; }
+  a.btn:active{ transform: translateY(0px); }
 
-    a.btn:hover{
-      transform: translateY(-2px);
-      border-color: rgba(var(--blue-rgb), 0.75);
-      box-shadow:
-        0 22px 55px rgba(0,0,0,0.70),
-        0 0 0 1px rgba(var(--blue-rgb),0.20);
-    }
-    a.btn:hover::before{ opacity: 1; }
-    a.btn:active{ transform: translateY(0px); }
+  .icon{
+    width: 20px;
+    height: 20px;
+    opacity: 0.95;
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,0.45));
+  }
 
-    .icon{
-      width: 20px;
-      height: 20px;
-      opacity: 0.95;
-      filter: drop-shadow(0 2px 12px rgba(0,0,0,0.45));
-    }
+  .footer{
+    margin-top: 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.62);
+    text-align: center;
+  }
 
-    .footer{
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .footer strong{ color: var(--blue); font-weight: 750; }
-  </style>
+  .footer strong{
+    color: #3A80F6;
+    font-weight: 750;
+  }
+</style>
 </head>
 
 <body>
@@ -172,4 +161,48 @@
   <main class="page">
     <div class="container">
       <img
-        src="https://raw.github
+        src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
+        class="profile"
+        alt="Profile Photo"
+      />
+
+      <h1>Mahmoud Chatila</h1>
+      <h2>Chief Executive Officer – Chatila Financial Group</h2>
+
+      <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
+        <span>Save Contact</span>
+      </a>
+
+      <a class="btn" href="tel:+96178929249">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
+        <span>Call</span>
+      </a>
+
+      <a class="btn" href="https://wa.me/96178929249">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
+        <span>WhatsApp</span>
+      </a>
+
+      <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
+        <span>Email</span>
+      </a>
+
+      <a class="btn" href="https://instagram.com/mahmoud__chatila">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
+        <span>Instagram</span>
+      </a>
+
+      <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
+        <span>Location</span>
+      </a>
+    </div>
+
+    <div class="footer">
+      Powered by <strong>CARDX</strong> • A smarter way to connect
+    </div>
+  </main>
+</body>
+</html>
