@@ -1,131 +1,150 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Mahmoud Chatila – CARDX</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f3f3f6;
-    color: #111;
-    text-align: center;
-    padding: 20px;
-}
-.container {
-    max-width: 480px;
-    margin: 0 auto;
-    background: #ffffff;
-    padding: 26px 18px 30px 18px;
-    border-radius: 28px;
-    box-shadow: 0 18px 48px rgba(0,0,0,0.18);
-}
-img.profile {
-    width: 190px;
-    height: 190px;
-    border-radius: 32px;
-    object-fit: cover;
-    display: block;
-    margin: 0 auto 22px auto;
-    box-shadow: 0 10px 26px rgba(0,0,0,0.25);
-}
-h1 {
-    font-size: 26px;
-    margin: 8px 0 2px;
-    font-weight: 700;
-}
-h2 {
-    font-size: 15px;
-    font-weight: 400;
-    color: #666;
-    margin: 0 0 26px;
+:root{
+  /* ELECTRIC BLUE ACCENT */
+  --accent: 58 128 246; /* #3A80F6 */
+
+  --bg: #05060b;
+  --card: rgba(18,20,32,0.72);
+  --border: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.94);
+  --muted: rgba(255,255,255,0.60);
 }
 
-/* Narrow premium buttons */
-a.btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+*{ box-sizing:border-box; }
 
-    width: 90%;
-    max-width: 360px;
-    padding: 14px 18px;
-    margin: 9px auto;
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:22px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color:var(--text);
 
-    font-size: 16px;
-    border-radius: 999px;
-    text-decoration: none;
-
-    color: #111;
-    background: #f4f4f7;
-    border: 1px solid #dedede;
-
-    transition: all 0.22s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-a.btn:hover {
-    background: #e7e7ec;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+  background:
+    radial-gradient(900px 520px at 18% 12%, rgba(var(--accent),0.22), transparent 60%),
+    radial-gradient(900px 520px at 82% 22%, rgba(120,140,255,0.12), transparent 60%),
+    linear-gradient(180deg, #04050a, #0a0c15);
 }
 
-/* Icons */
-.icon {
-    width: 20px;
-    height: 20px;
-    opacity: 0.9;
+.container{
+  width:100%;
+  max-width:480px;
+  padding:28px 18px 32px;
+  border-radius:28px;
+  background:var(--card);
+  border:1px solid var(--border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 28px 90px rgba(0,0,0,0.65);
+  position:relative;
+  overflow:hidden;
 }
 
-.footer {
-    margin-top: 26px;
-    font-size: 12px;
-    color: #777;
+/* Subtle electric sheen */
+.container::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(620px 240px at 30% 0%,
+      rgba(255,255,255,0.16),
+      transparent 55%);
+  pointer-events:none;
+}
+
+img.profile{
+  width:185px;
+  height:185px;
+  border-radius:32px;
+  object-fit:cover;
+  display:block;
+  margin:8px auto 18px;
+  box-shadow:0 20px 55px rgba(0,0,0,0.55);
+  outline:3px solid rgba(var(--accent),0.35);
+  outline-offset:6px;
+}
+
+h1{
+  font-size:28px;
+  font-weight:760;
+  margin:6px 0 4px;
+  text-align:center;
+  letter-spacing:-0.02em;
+}
+
+h2{
+  font-size:15px;
+  font-weight:450;
+  margin:0 0 22px;
+  color:var(--muted);
+  text-align:center;
+}
+
+a.btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:11px;
+  width:92%;
+  max-width:370px;
+  margin:10px auto;
+  padding:14px 18px;
+  border-radius:999px;
+  text-decoration:none;
+  color:var(--text);
+
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.08),
+      rgba(255,255,255,0.02)),
+    rgba(255,255,255,0.04);
+
+  border:1px solid var(--border);
+  box-shadow:0 10px 28px rgba(0,0,0,0.45);
+  transition: all .2s ease;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Electric blue hover glow */
+a.btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(260px 90px at 20% 10%,
+      rgba(var(--accent),0.30),
+      transparent 60%);
+  opacity:0;
+  transition:opacity .2s ease;
+}
+
+a.btn:hover{
+  transform: translateY(-2px);
+  border-color: rgba(var(--accent),0.65);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,0.65),
+    0 0 0 1px rgba(var(--accent),0.18);
+}
+
+a.btn:hover::before{ opacity:1; }
+
+.icon{
+  width:20px;
+  height:20px;
+  opacity:.95;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,0.35));
+}
+
+.footer{
+  margin-top:18px;
+  font-size:12px;
+  text-align:center;
+  color:var(--muted);
+}
+.footer strong{
+  color: rgba(var(--accent),0.95);
 }
 </style>
-</head>
-<body>
-
-<div class="container">
-    <img src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg" class="profile" alt="Profile Photo">
-
-    <h1>Mahmoud Chatila</h1>
-    <h2>Chief Executive Officer – Chatila Financial Group</h2>
-
-    <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
-        <span>Save Contact</span>
-    </a>
-
-    <a class="btn" href="tel:+96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
-        <span>Call</span>
-    </a>
-
-    <a class="btn" href="https://wa.me/96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
-        <span>WhatsApp</span>
-    </a>
-
-    <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
-        <span>Email</span>
-    </a>
-
-    <a class="btn" href="https://instagram.com/mahmoud__chatila">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
-        <span>Instagram</span>
-    </a>
-
-    <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
-        <span>Location</span>
-    </a>
-</div>
-
-<div class="footer">
-    Powered by CARDX • A smarter way to connect.
-</div>
-
-</body>
-</html>
