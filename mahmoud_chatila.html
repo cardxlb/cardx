@@ -7,11 +7,7 @@
 
 <style>
 * { box-sizing: border-box; }
-html, body {
-  height: 100%;
-  margin: 0;
-  background: #05060B;
-}
+html, body { height: 100%; margin: 0; background: #05060B; }
 
 body{
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -29,29 +25,50 @@ body{
     linear-gradient(180deg, #05060B, #070914);
 }
 
-/* PAGE CENTERING */
+/* CENTER THE WHOLE UNIT */
 .page{
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: clamp(16px, 3vw, 34px);
 }
 
-/* STACK: card + footer move together */
+/* card + footer move together */
 .stack{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px; /* distance between card and footer */
+  gap: 14px;
+}
+
+/* RESPONSIVE SCALE (phone -> desktop) */
+:root{
+  /* Card width grows with viewport, capped for desktop */
+  --cardW: min(92vw, 640px);
+
+  /* Spacing & sizing scale */
+  --padX: clamp(16px, 2.2vw, 26px);
+  --padY: clamp(22px, 2.6vw, 34px);
+  --radius: clamp(26px, 2.5vw, 34px);
+
+  --photo: clamp(170px, 20vw, 250px);
+  --photoRadius: clamp(28px, 2.2vw, 36px);
+
+  --h1: clamp(26px, 2.4vw, 36px);
+  --h2: clamp(14px, 1.4vw, 18px);
+
+  --btnHpad: clamp(18px, 2.2vw, 26px);
+  --btnVpad: clamp(14px, 1.6vw, 18px);
+  --btnText: clamp(16px, 1.5vw, 20px);
+  --icon: clamp(22px, 1.8vw, 26px);
 }
 
 /* CARD */
 .container{
-  width: 100%;
-  max-width: 480px;
-  padding: 28px 18px 32px;
-  border-radius: 30px;
+  width: var(--cardW);
+  padding: var(--padY) var(--padX);
+  border-radius: var(--radius);
   background: rgba(14,16,28,0.80);
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 30px 90px rgba(0,0,0,0.75);
@@ -59,21 +76,28 @@ body{
   -webkit-backdrop-filter: blur(16px);
   text-align: center;
   position: relative;
+  overflow: hidden; /* FIX: prevents corner/glow leak */
 }
 
+/* FIX: centered gradient highlight */
 .container::before{
   content:"";
   position:absolute;
-  inset:-2px;
-  background: radial-gradient(600px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    700px 340px at 50% 0%,
+    rgba(255,255,255,0.10),
+    transparent 60%
+  );
   pointer-events:none;
 }
 
 /* PROFILE */
 img.profile{
-  width: 184px;
-  height: 184px;
-  border-radius: 32px;
+  width: var(--photo);
+  height: var(--photo);
+  border-radius: var(--photoRadius);
   object-fit: cover;
   display: block;
   margin: 8px auto 18px;
@@ -83,28 +107,28 @@ img.profile{
 }
 
 h1{
-  margin: 6px 0 4px;
-  font-size: 28px;
-  font-weight: 780;
+  margin: 6px 0 6px;
+  font-size: var(--h1);
+  font-weight: 820;
   letter-spacing: -0.02em;
 }
 
 h2{
   margin: 0 0 22px;
-  font-size: 15px;
+  font-size: var(--h2);
   font-weight: 450;
   color: rgba(255,255,255,0.62);
 }
 
-/* BUTTONS — GRID FOR TRUE CENTER */
+/* BUTTONS */
 a.btn{
   width: 92%;
-  max-width: 380px;
-  margin: 11px auto;
-  padding: 14px 20px;
+  max-width: 520px; /* grows on desktop */
+  margin: clamp(10px, 1.2vw, 14px) auto;
+  padding: var(--btnVpad) var(--btnHpad);
 
   display: grid;
-  grid-template-columns: 24px 1fr 24px;
+  grid-template-columns: 28px 1fr 28px;
   align-items: center;
 
   text-decoration: none;
@@ -131,27 +155,33 @@ a.btn:hover{
 
 .icon{
   justify-self: start;
-  width: 22px;
-  height: 22px;
+  width: var(--icon);
+  height: var(--icon);
   filter: brightness(0) invert(1);
+  opacity: 0.95;
 }
 
 .btn span{
   justify-self: center;
-  font-size: 16px;
-  font-weight: 500;
+  text-align: center;
+  font-size: var(--btnText);
+  font-weight: 600;
 }
 
-/* FOOTER — ATTACHED */
+/* FOOTER attached */
 .footer{
   font-size: 12px;
   color: rgba(255,255,255,0.60);
   text-align: center;
 }
-
 .footer strong{
   color: #3A80F6;
-  font-weight: 750;
+  font-weight: 800;
+}
+
+/* OPTIONAL: make desktop view feel more “balanced” vertically */
+@media (min-width: 900px){
+  .stack{ gap: 16px; }
 }
 </style>
 </head>
@@ -163,49 +193,50 @@ a.btn:hover{
   <div class="stack">
 
     <div class="container">
-
-      <img src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
-           class="profile" alt="Profile Photo">
+      <img
+        src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
+        class="profile"
+        alt="Profile Photo"
+      />
 
       <h1>Mahmoud Chatila</h1>
       <h2>Chief Executive Officer – Chatila Financial Group</h2>
 
       <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
         <span>Save Contact</span>
         <span></span>
       </a>
 
       <a class="btn" href="tel:+96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
         <span>Call</span>
         <span></span>
       </a>
 
       <a class="btn" href="https://wa.me/96178929249">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
         <span>WhatsApp</span>
         <span></span>
       </a>
 
       <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
         <span>Email</span>
         <span></span>
       </a>
 
       <a class="btn" href="https://instagram.com/mahmoud__chatila">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
         <span>Instagram</span>
         <span></span>
       </a>
 
       <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
-        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
         <span>Location</span>
         <span></span>
       </a>
-
     </div>
 
     <div class="footer">
