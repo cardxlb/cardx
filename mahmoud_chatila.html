@@ -1,214 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Mahmoud Chatila – CARDX</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f3f3f6;
-    color: #111;
-    text-align: center;
-    padding: 20px;
-}
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-/* Container */
-.container {
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; padding: 0; background: #05060B; }
+
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: rgba(255,255,255,0.92);
+  }
+
+  /* hard-force the background so no host white shows through */
+  .bg{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
+      radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
+      linear-gradient(180deg, #05060B, #070914);
+  }
+
+  .page{
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+
+  .container{
+    width: 100%;
     max-width: 480px;
-    margin: 0 auto;
-    background: #ffffff;
     padding: 26px 18px 30px;
     border-radius: 28px;
-    box-shadow: 0 18px 48px rgba(0,0,0,0.18);
-}
+    background: rgba(14,16,28,0.78);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 28px 90px rgba(0,0,0,0.70);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
 
-/* Auto-sizing profile image */
-img.profile {
-    width: 190px;
-    height: 190px;
-    object-fit: cover;
-    object-position: center;
+  /* sheen layer, placed BEHIND content */
+  .container::before{
+    content:"";
+    position:absolute;
+    inset:-2px;
+    z-index: 0;
+    background: radial-gradient(620px 240px at 30% 0%, rgba(255,255,255,0.10), transparent 55%);
+    pointer-events:none;
+    opacity: 0.8;
+  }
+
+  /* ensure all content sits ABOVE the sheen */
+  .container > *{ position: relative; z-index: 1; }
+
+  img.profile{
+    width: 182px;
+    height: 182px;
     border-radius: 32px;
+    object-fit: cover;
     display: block;
-    margin: 0 auto 22px;
-    box-shadow: 0 10px 26px rgba(0,0,0,0.25);
-}
+    margin: 8px auto 18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+    outline: 2px solid rgba(58,128,246,0.70);
+    outline-offset: 7px;
+  }
 
-/* Headings */
-h1 {
-    font-size: 26px;
-    margin: 8px 0 2px;
-    font-weight: 700;
-}
+  h1{
+    margin: 6px 0 4px;
+    font-size: 28px;
+    font-weight: 780;
+    letter-spacing: -0.02em;
+  }
 
-h2 {
+  h2{
+    margin: 0 0 22px;
     font-size: 15px;
-    font-weight: 400;
-    color: #666;
-    margin: 0 0 26px;
-}
+    font-weight: 450;
+    color: rgba(255,255,255,0.62);
+  }
 
-/* PERFECTLY CENTERED BUTTONS */
-a.btn {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 90%;
-    max-width: 360px;
-    padding: 15px 20px;
+  a.btn{
+    width: 92%;
+    max-width: 372px;
     margin: 10px auto;
-
-    background: #000000;
-    border: 1px solid #3A80F6;
-    border-radius: 999px;
-
-    color: white;
-    font-size: 16px;
-    text-decoration: none;
-
-    transition: 0.25s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.20);
-}
-
-a.btn:hover {
-    background: #0A0A0A;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.30);
-}
-
-/* 3-column layout inside buttons */
-.btn-left, .btn-right {
-    width: 22px;
-    height: 22px;
-
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-}
+    gap: 11px;
 
-.btn-center {
-    flex-grow: 1;
-    text-align: center;
-    font-weight: 500;
-}
+    text-decoration: none;
+    color: rgba(255,255,255,0.92);
 
-/* White icons */
-.icon {
-    width: 22px;
-    height: 22px;
-    filter: brightness(0) invert(1);
-    opacity: 1;
-}
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+      rgba(255,255,255,0.05);
 
-/* Invisible placeholder icon for symmetry */
-.icon-placeholder {
-    width: 22px;
-    height: 22px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 999px;
+
+    box-shadow: 0 14px 38px rgba(0,0,0,0.55);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  a.btn::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: radial-gradient(320px 110px at 20% 10%, rgba(58,128,246,0.38), transparent 60%);
     opacity: 0;
-}
+    transition: opacity .18s ease;
+    pointer-events:none;
+  }
 
-.footer {
-    margin-top: 26px;
+  a.btn:hover{
+    transform: translateY(-2px);
+    border-color: rgba(58,128,246,0.85);
+    box-shadow:
+      0 22px 55px rgba(0,0,0,0.70),
+      0 0 0 1px rgba(58,128,246,0.20);
+  }
+
+  a.btn:hover::before{ opacity: 1; }
+  a.btn:active{ transform: translateY(0px); }
+
+  .icon{
+    width: 20px;
+    height: 20px;
+    opacity: 0.95;
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,0.45));
+  }
+
+  .footer{
+    margin-top: 16px;
     font-size: 12px;
-    color: #777;
-}
+    color: rgba(255,255,255,0.62);
+    text-align: center;
+  }
+
+  .footer strong{
+    color: #3A80F6;
+    font-weight: 750;
+  }
 </style>
 </head>
+
 <body>
+  <div class="bg"></div>
 
-<div class="container">
+  <main class="page">
+    <div class="container">
+      <img
+        src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/mahmoud_chatila.jpg"
+        class="profile"
+        alt="Profile Photo"
+      />
 
-    <!-- Profile Photo -->
-    <img class="profile" src="https://raw.githubusercontent.com/cardxlb/cardx/refs/heads/main/photo.jpg" alt="Profile Photo">
+      <h1>Mahmoud Chatila</h1>
+      <h2>Chief Executive Officer – Chatila Financial Group</h2>
 
-    <h1>Mahmoud Chatila</h1>
-    <h2>Chief Executive Officer – Chatila Financial Group</h2>
+      <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
+        <span>Save Contact</span>
+      </a>
 
-    <!-- Save Contact -->
-    <a class="btn" href="https://cardxlb.github.io/cardx/mahmoud_chatila.vcf">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
-        </span>
+      <a class="btn" href="tel:+96178929249">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
+        <span>Call</span>
+      </a>
 
-        <span class="btn-center">Save Contact</span>
+      <a class="btn" href="https://wa.me/96178929249">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
+        <span>WhatsApp</span>
+      </a>
 
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
+      <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
+        <span>Email</span>
+      </a>
 
-    <!-- Call -->
-    <a class="btn" href="tel:+96178929249">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
-        </span>
+      <a class="btn" href="https://instagram.com/mahmoud__chatila">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
+        <span>Instagram</span>
+      </a>
 
-        <span class="btn-center">Call</span>
+      <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
+        <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
+        <span>Location</span>
+      </a>
+    </div>
 
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
-
-    <!-- WhatsApp -->
-    <a class="btn" href="https://wa.me/96178929249">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
-        </span>
-
-        <span class="btn-center">WhatsApp</span>
-
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
-
-    <!-- Email -->
-    <a class="btn" href="mailto:mahmoudchatila974@gmail.com">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
-        </span>
-
-        <span class="btn-center">Email</span>
-
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
-
-    <!-- Instagram -->
-    <a class="btn" href="https://instagram.com/mahmoud__chatila">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
-        </span>
-
-        <span class="btn-center">Instagram</span>
-
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
-
-    <!-- Location -->
-    <a class="btn" href="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7">
-        <span class="btn-left">
-            <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
-        </span>
-
-        <span class="btn-center">Location</span>
-
-        <span class="btn-right">
-            <img class="icon-placeholder" alt="">
-        </span>
-    </a>
-
-</div>
-
-<div class="footer">
-    Powered by CARDX • Smart Digital Identity
-</div>
-
+    <div class="footer">
+      Powered by <strong>CARDX</strong> • A smarter way to connect
+    </div>
+  </main>
 </body>
 </html>
