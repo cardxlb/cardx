@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -453,6 +454,7 @@
           <label>Profile image (.jpg/.png) (optional — if empty, NO image section appears)</label>
           <input id="photo" type="file" accept="image/*" />
           <div class="mono help" id="photoInfo">No image selected.</div>
+          <img id="photoPreview" class="hidden" alt="Photo preview" style="margin-top:10px;width:160px;height:160px;border-radius:18px;object-fit:cover;border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 36px rgba(0,0,0,.45);" />
         </div>
 
         <div class="divider"></div>
@@ -1112,7 +1114,7 @@ function collect(){
   const adr_raw = advanced ? $("adr").value.trim() : "";
   const categories = advanced ? $("categories").value.trim().replace(/\s*,\s*/g, ",") : "";
 
-  const has_photo = !!($("photo").files?.[0]);
+  const has_photo = !!($("photo").files?.[0]) || REMOTE_HAS_PHOTO;
 
   return {
     owner, repo, branch, path,
@@ -1136,6 +1138,36 @@ function collect(){
 /* =========================
    Preview + file panel
 ========================= */
+
+function updatePhotoUI(){
+  const imgEl = $("photoPreview");
+  const info = $("photoInfo");
+  const f = $("photo").files?.[0];
+
+  if(f){
+    // local preview
+    const url = URL.createObjectURL(f);
+    imgEl.src = url;
+    imgEl.classList.remove("hidden");
+    info.textContent = `Selected: ${f.name} (${Math.round(f.size/1024)} KB)`;
+    // revoke after image loads
+    imgEl.onload = ()=>{ try{ URL.revokeObjectURL(url); }catch{} };
+    return;
+  }
+
+  if(REMOTE_HAS_PHOTO && REMOTE_PHOTO_URL){
+    imgEl.src = REMOTE_PHOTO_URL;
+    imgEl.classList.remove("hidden");
+    info.textContent = "Photo exists on GitHub (remote). Select a file to replace it.";
+    return;
+  }
+
+  // none
+  imgEl.classList.add("hidden");
+  imgEl.removeAttribute("src");
+  info.textContent = "No image selected.";
+}
+
 function updatePreview(){
   const d = collect();
   $("slugLine").textContent = `${d.slug}.html | ${d.slug}.vcf` + (d.has_photo ? ` | ${d.slug}.jpg` : ``);
@@ -1150,6 +1182,8 @@ function updatePreview(){
   $("fileHtml").textContent = `${d.slug}.html`;
   $("fileVcf").textContent = `${d.slug}.vcf`;
   $("fileJpg").textContent = d.has_photo ? `${d.slug}.jpg` : "(no photo)";
+
+  updatePhotoUI();
 }
 
 /* =========================
@@ -1199,6 +1233,8 @@ const CONTACTS_FILENAME_DEFAULT = "cardx_contacts.json";
 let CONTACTS = [];
 let CONTACTS_LOADED = false;
 let selectedId = null;
+let REMOTE_HAS_PHOTO = false; // true when loaded contact has .jpg in repo
+let REMOTE_PHOTO_URL = "";
 
 function contactsFilename(){ return CONTACTS_FILENAME_DEFAULT; }
 
@@ -2129,8 +2165,7 @@ function initApp(){
   });
 
   $("photo").addEventListener("change", ()=>{
-    const f = $("photo").files?.[0];
-    $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
+    updatePhotoUI();
     updatePreview();
   });
 
