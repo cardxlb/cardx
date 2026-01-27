@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CARDX Builder</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#05060B;color:#fff}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    h1{margin:0 0 6px;font-size:28px}
+    p{margin:0 0 18px;color:rgba(255,255,255,.7)}
+    .card{background:rgba(14,16,28,.8);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{display:block;font-size:12px;color:rgba(255,255,255,.75);margin:6px 0}
+    input,textarea,select{
+      width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);color:#fff;outline:none
+    }
+    textarea{min-height:86px;resize:vertical}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{
+      padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.08);color:#fff;cursor:pointer
+    }
+    button:hover{border-color:rgba(58,128,246,.85)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:rgba(255,255,255,.75)}
+    .ok{color:#7CFF9A}
+    .warn{color:#FFD37C}
+    .err{color:#FF7C7C}
+    .full{grid-column:1/-1}
+    .previewBox{margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18)}
+    a{color:#7fb0ff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>CARDX Contact Card Builder</h1>
+    <p>Generate + upload <span class="mono">firstname_lastname.html</span>, <span class="mono">.vcf</span>, <span class="mono">.jpg</span> to your GitHub repo.</p>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>GitHub Owner</label>
+          <input id="owner" value="cardxlb" />
+        </div>
+        <div>
+          <label>GitHub Repo</label>
+          <input id="repo" value="cardx" />
+        </div>
+        <div>
+          <label>Branch</label>
+          <input id="branch" value="main" />
+        </div>
+        <div>
+          <label>Folder path in repo (blank = root)</label>
+          <input id="path" placeholder="" />
+        </div>
+
+        <div class="full">
+          <label>GitHub Token (Fine-grained PAT with Contents: Read/Write)</label>
+          <input id="token" type="password" placeholder="Paste token here (stored only in your browser)" />
+          <div class="mono" style="margin-top:6px;">Tip: this is saved in <b>localStorage</b> if you click “Save Token”.</div>
+        </div>
+
+        <div>
+          <label>First name</label>
+          <input id="first" value="Mahmoud" />
+        </div>
+        <div>
+          <label>Last name</label>
+          <input id="last" value="Chatila" />
+        </div>
+
+        <div class="full">
+          <label>Full display name (FN)</label>
+          <input id="fn" value="Mahmoud Chatila" />
+        </div>
+
+        <div>
+          <label>Company (ORG)</label>
+          <input id="org" value="Chatila Financial Group" />
+        </div>
+        <div>
+          <label>Title (TITLE)</label>
+          <input id="title" value="Chief Executive Officer" />
+        </div>
+
+        <div>
+          <label>Phone (E.164)</label>
+          <input id="tel" value="+96178929249" />
+        </div>
+        <div>
+          <label>Email</label>
+          <input id="email" value="mahmoudchatila974@gmail.com" />
+        </div>
+
+        <div>
+          <label>WhatsApp number (digits only, country code)</label>
+          <input id="wa" value="96178929249" />
+        </div>
+        <div>
+          <label>Instagram URL</label>
+          <input id="ig" value="https://instagram.com/mahmoud__chatila" />
+        </div>
+
+        <div class="full">
+          <label>Location URL (Google Maps link)</label>
+          <input id="maps" value="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7" />
+        </div>
+
+        <div class="full">
+          <label>Notes (optional)</label>
+          <textarea id="note" placeholder="Optional note in the contact card"></textarea>
+        </div>
+
+        <div class="full">
+          <label>Profile image (.jpg/.png)</label>
+          <input id="photo" type="file" accept="image/*" />
+          <div class="mono" id="photoInfo" style="margin-top:6px;">No image selected.</div>
+        </div>
+      </div>
+
+      <div class="previewBox">
+        <div class="mono">Slug / filenames:</div>
+        <div class="mono" id="slugLine">—</div>
+        <div class="mono" style="margin-top:8px;">Expected GitHub Pages URLs:</div>
+        <div class="mono" id="urlsLine">—</div>
+      </div>
+
+      <div class="row">
+        <button id="saveTokenBtn">Save Token</button>
+        <button id="loadTokenBtn">Load Saved Token</button>
+        <button id="clearTokenBtn">Clear Saved Token</button>
+        <button id="downloadBtn">Download 3 files</button>
+        <button id="uploadBtn">Upload to GitHub</button>
+      </div>
+
+      <div class="mono" style="margin-top:12px;" id="status"></div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id)=>document.getElementById(id);
+
+  function slugify(first, last){
+    const clean = (s)=> (s||"")
+      .trim().toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+    const a = clean(first), b = clean(last);
+    return [a,b].filter(Boolean).join("_") || "contact";
+  }
+
+  function base64FromText(text){
+    // UTF-8 safe base64
+    return btoa(unescape(encodeURIComponent(text)));
+  }
+
+  function filePathJoin(path, filename){
+    if(!path) return filename;
+    return path.replace(/\/+$/,"") + "/" + filename;
+  }
+
+  function buildVcf(data){
+    // vCard 3.0 (safe core fields + optional NOTE)
+    // N is "Last;First;Additional;Prefix;Suffix"
+    const lines = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `N:${data.last};${data.first};;;`,
+      `FN:${data.fn}`,
+      data.org ? `ORG:${data.org}` : "",
+      data.title ? `TITLE:${data.title}` : "",
+      data.tel ? `TEL;TYPE=CELL:${data.tel}` : "",
+      data.email ? `EMAIL;TYPE=INTERNET:${data.email}` : "",
+      data.note ? `NOTE:${data.note.replace(/\n/g,"\\n")}` : "",
+      "END:VCARD"
+    ].filter(Boolean);
+    return lines.join("\n");
+  }
+
+  function buildHtml(data){
+    const owner = data.owner, repo = data.repo, branch = data.branch, path = data.path;
+    const slug = data.slug;
+    const basePages = `https://${owner}.github.io/${repo}`;
+    const vcfUrl = `${basePages}/${path ? path.replace(/^\/+|\/+$/g,"") + "/" : ""}${slug}.vcf`;
+    const imgRaw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${path ? path.replace(/^\/+|\/+$/g,"") + "/" : ""}${slug}.jpg`;
+
+    // Your clean single-template page (no duplicated head/body)
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(data.fn)} – CARDX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: #05060B; }
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: rgba(255,255,255,0.92);
+  }
+  .bg{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
+      radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
+      linear-gradient(180deg, #05060B, #070914);
+  }
+  .page{
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(16px, 3vw, 36px);
+  }
+  .stack{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--u) * 1.2);
+  }
+  :root{ --u: clamp(11px, 1.15vw + 7px, 18px); }
+  .container{
+    width: min(92vw, calc(var(--u) * 42));
+    padding: calc(var(--u) * 2.1) calc(var(--u) * 1.5);
+    border-radius: calc(var(--u) * 2.1);
+    background: rgba(14,16,28,0.80);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 calc(var(--u) * 2.2) calc(var(--u) * 6.2) rgba(0,0,0,0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .container::before{
+    content:"";
+    position:absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      calc(var(--u) * 46) calc(var(--u) * 22) at 50% 0%,
+      rgba(255,255,255,0.10),
+      transparent 60%
+    );
+    pointer-events:none;
+  }
+  img.profile{
+    width: calc(var(--u) * 15.8);
+    height: calc(var(--u) * 15.8);
+    border-radius: calc(var(--u) * 2.0);
+    object-fit: cover;
+    display: block;
+    margin: calc(var(--u) * 0.6) auto calc(var(--u) * 1.4);
+    box-shadow: 0 calc(var(--u) * 1.3) calc(var(--u) * 4.2) rgba(0,0,0,0.65);
+    outline: 2px solid rgba(58,128,246,0.75);
+    outline-offset: calc(var(--u) * 0.6);
+  }
+  h1{
+    margin: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.5);
+    font-size: calc(var(--u) * 2.55);
+    font-weight: 820;
+    letter-spacing: -0.02em;
+  }
+  h2{
+    margin: 0 0 calc(var(--u) * 1.6);
+    font-size: calc(var(--u) * 1.25);
+    font-weight: 450;
+    color: rgba(255,255,255,0.62);
+  }
+  a.btn{
+    width: 92%;
+    max-width: calc(var(--u) * 34.5);
+    margin: calc(var(--u) * 0.85) auto;
+    padding: calc(var(--u) * 1.15) calc(var(--u) * 1.7);
+    display: grid;
+    grid-template-columns: calc(var(--u) * 2.2) 1fr calc(var(--u) * 2.2);
+    align-items: center;
+    text-decoration: none;
+    color: rgba(255,255,255,0.94);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+      rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    box-shadow: 0 calc(var(--u) * 1.05) calc(var(--u) * 2.9) rgba(0,0,0,0.55);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  a.btn:hover{
+    transform: translateY(-2px);
+    border-color: rgba(58,128,246,0.85);
+    box-shadow:
+      0 calc(var(--u) * 1.6) calc(var(--u) * 4.1) rgba(0,0,0,0.70),
+      0 0 0 1px rgba(58,128,246,0.22);
+  }
+  .icon{
+    justify-self: start;
+    width: calc(var(--u) * 1.9);
+    height: calc(var(--u) * 1.9);
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
+  }
+  .btn span{
+    justify-self: center;
+    text-align: center;
+    font-size: calc(var(--u) * 1.45);
+    font-weight: 600;
+  }
+  .footer{
+    font-size: calc(var(--u) * 0.95);
+    color: rgba(255,255,255,0.60);
+    text-align: center;
+    margin-bottom: calc(var(--u) * 0.4);
+  }
+  .footer strong{
+    color: #3A80F6;
+    font-weight: 800;
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <main class="page">
+    <div class="stack">
+      <div class="container">
+        <img src="${imgRaw}" class="profile" alt="Profile Photo" />
+        <h1>${escapeHtml(data.fn)}</h1>
+        <h2>${escapeHtml(data.title)} – ${escapeHtml(data.org)}</h2>
+
+        <a class="btn" href="${vcfUrl}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
+          <span>Save Contact</span><span></span>
+        </a>
+
+        <a class="btn" href="tel:${escapeAttr(data.tel)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
+          <span>Call</span><span></span>
+        </a>
+
+        <a class="btn" href="https://wa.me/${escapeAttr(data.wa)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
+          <span>WhatsApp</span><span></span>
+        </a>
+
+        <a class="btn" href="mailto:${escapeAttr(data.email)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
+          <span>Email</span><span></span>
+        </a>
+
+        <a class="btn" href="${escapeAttr(data.ig)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
+          <span>Instagram</span><span></span>
+        </a>
+
+        <a class="btn" href="${escapeAttr(data.maps)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
+          <span>Location</span><span></span>
+        </a>
+      </div>
+
+      <div class="footer">
+        Powered by <strong>CARDX</strong> • A smarter way to connect
+      </div>
+    </div>
+  </main>
+</body>
+</html>`;
+  }
+
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+
+  function collect(){
+    const owner = $("owner").value.trim();
+    const repo = $("repo").value.trim();
+    const branch = $("branch").value.trim() || "main";
+    const path = $("path").value.trim().replace(/^\/+|\/+$/g,"");
+
+    const first = $("first").value.trim();
+    const last = $("last").value.trim();
+    const slug = slugify(first,last);
+
+    return {
+      owner, repo, branch, path,
+      first, last,
+      slug,
+      fn: $("fn").value.trim(),
+      org: $("org").value.trim(),
+      title: $("title").value.trim(),
+      tel: $("tel").value.trim(),
+      email: $("email").value.trim(),
+      wa: $("wa").value.trim().replace(/\D/g,""),
+      ig: $("ig").value.trim(),
+      maps: $("maps").value.trim(),
+      note: $("note").value.trim()
+    };
+  }
+
+  function updatePreview(){
+    const d = collect();
+    const slug = d.slug;
+    $("slugLine").textContent = `${slug}.html | ${slug}.vcf | ${slug}.jpg`;
+
+    const basePages = `https://${d.owner}.github.io/${d.repo}`;
+    const prefix = d.path ? `/${d.path}` : "";
+    $("urlsLine").innerHTML =
+      `<a href="${basePages}${prefix}/${slug}.html" target="_blank">${basePages}${prefix}/${slug}.html</a><br>` +
+      `<a href="${basePages}${prefix}/${slug}.vcf" target="_blank">${basePages}${prefix}/${slug}.vcf</a>`;
+  }
+
+  async function readImageBase64(file){
+    // Return { base64, mime }
+    const dataUrl = await new Promise((resolve,reject)=>{
+      const r = new FileReader();
+      r.onload = ()=>resolve(r.result);
+      r.onerror = ()=>reject(new Error("Failed to read image"));
+      r.readAsDataURL(file);
+    });
+    const [meta, b64] = dataUrl.split(",");
+    const mime = (meta.match(/data:(.*?);base64/)||[])[1] || "image/jpeg";
+    return { base64: b64, mime };
+  }
+
+  async function putFile({owner, repo, branch, token, path, filename, contentBase64, message}){
+    const fullPath = filePathJoin(path, filename);
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+
+    // Need SHA if file exists
+    let sha = null;
+    const getRes = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+    });
+    if(getRes.ok){
+      const j = await getRes.json();
+      sha = j.sha;
+    }
+
+    const body = {
+      message,
+      content: contentBase64,
+      branch
+    };
+    if(sha) body.sha = sha;
+
+    const putRes = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if(!putRes.ok){
+      const t = await putRes.text();
+      throw new Error(`Upload failed for ${filename}: ${putRes.status} ${t}`);
+    }
+    return await putRes.json();
+  }
+
+  function setStatus(msg, cls="mono"){
+    const el = $("status");
+    el.className = "mono " + (cls || "");
+    el.textContent = msg;
+  }
+
+  // events
+  ["owner","repo","branch","path","first","last","fn","org","title","tel","email","wa","ig","maps"].forEach(id=>{
+    $(id).addEventListener("input", updatePreview);
+  });
+
+  $("photo").addEventListener("change", ()=>{
+    const f = $("photo").files?.[0];
+    $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
+  });
+
+  $("saveTokenBtn").addEventListener("click", ()=>{
+    const tok = $("token").value.trim();
+    if(!tok) return setStatus("No token to save.", "warn");
+    localStorage.setItem("cardx_github_token", tok);
+    setStatus("Token saved in localStorage.", "ok");
+  });
+  $("loadTokenBtn").addEventListener("click", ()=>{
+    const tok = localStorage.getItem("cardx_github_token") || "";
+    $("token").value = tok;
+    setStatus(tok ? "Loaded saved token." : "No saved token found.", tok ? "ok" : "warn");
+  });
+  $("clearTokenBtn").addEventListener("click", ()=>{
+    localStorage.removeItem("cardx_github_token");
+    $("token").value = "";
+    setStatus("Saved token cleared.", "ok");
+  });
+
+  $("downloadBtn").addEventListener("click", async ()=>{
+    try{
+      const d = collect();
+      const vcf = buildVcf(d);
+      const html = buildHtml(d);
+
+      downloadText(`${d.slug}.vcf`, vcf);
+      downloadText(`${d.slug}.html`, html);
+
+      const f = $("photo").files?.[0];
+      if(f) downloadBlob(`${d.slug}.jpg`, f);
+      else setStatus("Downloaded .vcf + .html. (No image selected to download.)", "warn");
+      if(f) setStatus("Downloaded .vcf + .html + image.", "ok");
+    }catch(e){
+      setStatus(e.message, "err");
+    }
+  });
+
+  $("uploadBtn").addEventListener("click", async ()=>{
+    try{
+      const token = $("token").value.trim();
+      if(!token) throw new Error("Paste your GitHub token first.");
+
+      const d = collect();
+      const slug = d.slug;
+
+      const vcf = buildVcf(d);
+      const html = buildHtml(d);
+
+      const imgFile = $("photo").files?.[0];
+      if(!imgFile) throw new Error("Select a profile image before upload (it will be saved as slug.jpg).");
+
+      setStatus("Reading image…");
+      const img = await readImageBase64(imgFile);
+
+      setStatus("Uploading .vcf…");
+      await putFile({
+        owner: d.owner, repo: d.repo, branch: d.branch, token,
+        path: d.path,
+        filename: `${slug}.vcf`,
+        contentBase64: base64FromText(vcf),
+        message: `CARDX: update ${slug}.vcf`
+      });
+
+      setStatus("Uploading .html…");
+      await putFile({
+        owner: d.owner, repo: d.repo, branch: d.branch, token,
+        path: d.path,
+        filename: `${slug}.html`,
+        contentBase64: base64FromText(html),
+        message: `CARDX: update ${slug}.html`
+      });
+
+      setStatus("Uploading image…");
+      await putFile({
+        owner: d.owner, repo: d.repo, branch: d.branch, token,
+        path: d.path,
+        filename: `${slug}.jpg`,
+        contentBase64: img.base64,
+        message: `CARDX: update ${slug}.jpg`
+      });
+
+      const basePages = `https://${d.owner}.github.io/${d.repo}`;
+      const prefix = d.path ? `/${d.path}` : "";
+      setStatus(`Done. Open: ${basePages}${prefix}/${slug}.html`, "ok");
+      updatePreview();
+    }catch(e){
+      setStatus(e.message, "err");
+    }
+  });
+
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    downloadBlob(filename, blob);
+  }
+  function downloadBlob(filename, blobOrFile){
+    const url = URL.createObjectURL(blobOrFile);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // init
+  updatePreview();
+  // auto-load token if present
+  const saved = localStorage.getItem("cardx_github_token");
+  if(saved) $("token").value = saved;
+</script>
+</body>
+</html>
