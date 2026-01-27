@@ -69,7 +69,7 @@
   },
   {
     "id": "032de0da-c08c-4bee-8bb6-42746efd5693",
-    "created_at": "2026-01-27T09:35:48.986Z",
+    "created_at": "2026-01-27T09:59:20.069Z",
     "owner": "cardxlb",
     "repo": "cardx",
     "branch": "main",
@@ -85,8 +85,8 @@
     "wa_num": "78929249",
     "email_user": "mahmoudchatila974",
     "email_domain": "gmail.com",
-    "ig_user": "",
-    "maps": "",
+    "ig_user": "mahmoud__chatila",
+    "maps": "https://maps.app.goo.gl/QyvitV4g9yrkvxcp7",
     "note": "",
     "advanced": false,
     "url": "",
@@ -95,11 +95,10 @@
     "work_num": "",
     "adr_raw": "",
     "categories": "",
-    "has_photo": true,
+    "has_photo": false,
     "slug": "mahmoud_chatila",
-    "manual_slug": "mahmoud_chatila",
-    "_has_html": true,
-    "_source": "scanned_vcf"
+    "manual_slug": "",
+    "_source": "manual_save"
   },
   {
     "id": "ac6fdcd9-305a-462a-a248-cbb4e93a5dfc",
