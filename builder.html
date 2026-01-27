@@ -324,6 +324,10 @@
             <label>Folder path (blank = root)</label>
             <input id="path" placeholder="" />
           </div>
+          <div>
+            <label>Contacts file (JSON)</label>
+            <input id="contactsFile" value="contacts.json" />
+          </div>
         </div>
 
         <div class="full" style="margin-top:10px;">
@@ -542,6 +546,8 @@
             <div class="count"><span id="managerCount">0</span> persons</div>
           </div>
           <div class="row" style="margin-top:0;">
+            <button id="reloadOnlineBtn" class="mini primary">Reload Online</button>
+            <button id="discoverBtn" class="mini">Discover existing cards</button>
             <button id="exportContactsBtn" class="mini">Export JSON</button>
             <button id="importContactsBtn" class="mini">Import JSON</button>
             <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -1171,6 +1177,128 @@ async function updateNameStatus(){
   }
 }
 
+
+/* =========================
+   Online Contacts Manager (GitHub-backed)
+   - Stores contacts in a JSON file inside your repo (default: contacts.json)
+   - Reads: via raw.githubusercontent.com (public) OR GitHub API (if private with token)
+   - Writes: via GitHub API (requires token with Contents: Read/Write)
+   - Local download is still available via Export JSON
+========================= */
+let contactsCache = [];
+let contactsLoadedOnce = false;
+
+function getContactsSpec(){
+  const owner = $("owner").value.trim();
+  const repo  = $("repo").value.trim();
+  const branch= $("branch").value.trim() || "main";
+  const path  = $("path").value.trim().replace(/^\/+|\/+$/g,"");
+  const file  = ($("contactsFile") ? $("contactsFile").value.trim() : "contacts.json") || "contacts.json";
+  return { owner, repo, branch, path, file };
+}
+
+function contactsRawUrl(){
+  const {owner, repo, branch, path, file} = getContactsSpec();
+  const prefix = path ? `${path}/` : "";
+  // raw works for public repos; for private repos we'll fall back to API
+  return `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${file}`;
+}
+
+async function loadContactsOnline(){
+  const spec = getContactsSpec();
+  const token = $("token").value.trim();
+  const prefix = spec.path ? `${spec.path}/` : "";
+  // Try raw first (public)
+  try{
+    const res = await fetch(contactsRawUrl(), { cache: "no-store" });
+    if(res.ok){
+      const txt = await res.text();
+      const json = txt.trim() ? JSON.parse(txt) : [];
+      if(!Array.isArray(json)) throw new Error("contacts.json must be an array");
+      contactsCache = json;
+      contactsLoadedOnce = true;
+      return contactsCache;
+    }
+  }catch(_e){
+    // ignore and try API
+  }
+  // Fallback: GitHub API (needs token for private)
+  if(!token){
+    // If no token and raw failed, we can't read. Keep cache empty.
+    contactsCache = [];
+    contactsLoadedOnce = true;
+    return contactsCache;
+  }
+  const fullPath = filePathJoin(spec.path, spec.file);
+  const url = `https://api.github.com/repos/${spec.owner}/${spec.repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}?ref=${encodeURIComponent(spec.branch)}`;
+  const apiRes = await fetch(url, {
+    headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+  });
+  if(apiRes.status === 404){
+    contactsCache = [];
+    contactsLoadedOnce = true;
+    return contactsCache;
+  }
+  if(!apiRes.ok){
+    const t = await apiRes.text();
+    throw new Error(`Failed to load contacts.json: ${apiRes.status} ${t}`);
+  }
+  const j = await apiRes.json();
+  const content = j.content ? atob(j.content.replace(/\n/g,"")) : "";
+  const json = content.trim() ? JSON.parse(content) : [];
+  if(!Array.isArray(json)) throw new Error("contacts.json must be an array");
+  contactsCache = json;
+  contactsLoadedOnce = true;
+  return contactsCache;
+}
+
+async function saveContactsOnline(list){
+  const token = $("token").value.trim();
+  if(!token) throw new Error("Token required to save contacts online.");
+  const spec = getContactsSpec();
+  const payload = JSON.stringify(list, null, 2);
+  await putFile({
+    owner: spec.owner, repo: spec.repo, branch: spec.branch, token,
+    path: spec.path,
+    filename: spec.file,
+    contentBase64: base64FromText(payload),
+    message: `CARDX: update ${spec.file}`
+  });
+  contactsCache = list;
+  contactsLoadedOnce = true;
+  return true;
+}
+
+function ensureIds(list){
+  return list.map(c=>{
+    if(!c.id) c.id = uuidv4();
+    return c;
+  });
+}
+
+async function getContacts(){
+  if(!contactsLoadedOnce){
+    await loadContactsOnline();
+  }
+  return contactsCache;
+}
+
+async function upsertContactOnline(contact){
+  const list = ensureIds(await getContacts());
+  const id = contact.id || uuidv4();
+  contact.id = id;
+  const idx = list.findIndex(x=>x.id === id);
+  if(idx >= 0) list[idx] = contact;
+  else list.unshift(contact);
+  await saveContactsOnline(list);
+}
+
+async function deleteContactOnline(id){
+  const list = ensureIds(await getContacts()).filter(x=>x.id !== id);
+  await saveContactsOnline(list);
+}
+
+
 /* =========================
    Contacts Manager (local)
 ========================= */
@@ -1186,28 +1314,30 @@ function saveContacts(list){
   localStorage.setItem(LS.contacts, JSON.stringify(list));
 }
 
+
+// Override local contacts with ONLINE (GitHub-backed) contacts
+async function loadContacts(){ return await getContacts(); }
+async function saveContacts(list){ await saveContactsOnline(list); }
+
+
 function contactKey(c){
   // stable identifier
   return c.id || (c.id = uuidv4());
 }
 
-function upsertContact(contact){
-  const list = loadContacts();
-  const id = contactKey(contact);
-  const idx = list.findIndex(x=>x.id === id);
-  if(idx >= 0) list[idx] = contact;
-  else list.unshift(contact);
-  saveContacts(list);
-  renderManager();
-  renderQuick();
+async function upsertContact(contact){
+  await upsertContactOnline(contact);
+  await renderManager();
+  await renderQuick();
 }
 
-function deleteContactById(id){
-  const list = loadContacts().filter(x=>x.id !== id);
-  saveContacts(list);
-  renderManager();
-  renderQuick();
+
+async function deleteContactById(id){
+  await deleteContactOnline(id);
+  await renderManager();
+  await renderQuick();
 }
+
 
 function contactDisplay(c){
   const name = (c.fn || [c.first,c.last].filter(Boolean).join(" ").trim() || c.slug || "Unnamed");
@@ -1217,8 +1347,8 @@ function contactDisplay(c){
 
 let selectedId = null;
 
-function renderQuick(){
-  const list = loadContacts();
+async function renderQuick(){
+  const list = await loadContacts();
   $("quickCount").textContent = `${list.length} contacts`;
   const box = $("quickList");
   box.innerHTML = "";
@@ -1244,21 +1374,21 @@ function renderQuick(){
   });
 
   box.querySelectorAll("button[data-act]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const id = btn.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       if(act === "load"){
-        const c = loadContacts().find(x=>x.id===id);
+        const c = (await loadContacts()).find(x=>x.id===id);
         if(c) loadIntoBuilder(c);
       }else if(act === "del"){
-        if(confirm("Delete this contact from manager?")) deleteContactById(id);
+        if(confirm("Delete this contact from manager?")) await await deleteContactById(id);
       }
     });
   });
 }
 
-function renderManager(){
-  const list = loadContacts();
+async function renderManager(){
+  const list = await loadContacts();
   $("managerCount").textContent = String(list.length);
 
   const q = $("search").value.trim().toLowerCase();
@@ -1294,21 +1424,21 @@ function renderManager(){
   }
 
   box.querySelectorAll("button[data-act]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const id = btn.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       if(act === "select"){
         selectedId = id;
-        const c = loadContacts().find(x=>x.id===id);
+        const c = (await loadContacts()).find(x=>x.id===id);
         renderSelectedMeta(c);
         renderManager();
       }else if(act === "load"){
-        const c = loadContacts().find(x=>x.id===id);
+        const c = (await loadContacts()).find(x=>x.id===id);
         if(c) loadIntoBuilder(c);
       }else if(act === "del"){
         if(confirm("Delete this contact from manager?")) {
           if(selectedId===id) selectedId=null;
-          deleteContactById(id);
+          await deleteContactById(id);
           renderSelectedMeta(null);
         }
       }
@@ -1317,7 +1447,7 @@ function renderManager(){
 
   // quick selected panel update if not yet set
   if(selectedId){
-    const c = loadContacts().find(x=>x.id===selectedId) || null;
+    const c = (await loadContacts()).find(x=>x.id===selectedId) || null;
     renderSelectedMeta(c);
   }else{
     renderSelectedMeta(null);
@@ -1558,6 +1688,113 @@ async function uploadWithDecision(){
   }
 }
 
+
+/* =========================
+   Discover existing cards in repo and import into contacts.json
+   - Scans the selected repo/path for *.html/*.vcf/*.jpg
+   - Builds contacts for slugs (firstname_lastname) found
+   - Adds ONLY missing slugs (no overwrite) unless you confirm overwrite
+========================= */
+async function ghListDir(owner, repo, token, path, branch){
+  const p = path ? path.replace(/^\/+|\/+$/g,"") : "";
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(p).replace(/%2F/g,"/")}?ref=${encodeURIComponent(branch)}`;
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/vnd.github+json",
+      ...(token ? {"Authorization": `Bearer ${token}`} : {})
+    }
+  });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`Failed to list repo folder: ${res.status} ${t}`);
+  }
+  const j = await res.json();
+  if(!Array.isArray(j)) throw new Error("Folder listing did not return an array. Check path.");
+  return j;
+}
+
+function parseSlugToNames(slug){
+  const parts = String(slug||"").split("_").filter(Boolean);
+  const cap = (w)=> w ? (w[0].toUpperCase()+w.slice(1)) : "";
+  if(parts.length >= 2){
+    return { first: cap(parts[0]), last: cap(parts.slice(1).join(" ")) };
+  }
+  return { first: cap(parts[0]||""), last: "" };
+}
+
+async function discoverExistingCards(){
+  const token = $("token").value.trim();
+  const spec = getContactsSpec();
+
+  // Listing a private repo folder requires token; public works without but rate-limited.
+  if(!token){
+    const ok = confirm("No GitHub token set. Discovery may fail on private repos or hit rate limits. Continue?");
+    if(!ok) return;
+  }
+
+  setStatus("Discovering existing cards in repo…");
+  const items = await ghListDir(spec.owner, spec.repo, token, spec.path, spec.branch);
+
+  const files = items
+    .filter(x=>x && x.type === "file" && typeof x.name === "string")
+    .map(x=>x.name);
+
+  const html = new Set(files.filter(n=>n.endsWith(".html")).map(n=>n.replace(/\.html$/i,"")));
+  const vcf  = new Set(files.filter(n=>n.endsWith(".vcf")).map(n=>n.replace(/\.vcf$/i,"")));
+  const jpg  = new Set(files.filter(n=>n.match(/\.(jpg|jpeg|png|webp)$/i)).map(n=>n.replace(/\.(jpg|jpeg|png|webp)$/i,"")));
+
+  // Candidate slugs: anything that has an html OR vcf
+  const slugs = Array.from(new Set([...html, ...vcf]))
+    .filter(s=>s && s !== "builder" && s !== "index");
+
+  const existing = ensureIds(await getContacts());
+  const bySlug = new Map(existing.map(c=>[c.slug, c]));
+  const toAdd = [];
+
+  for(const slug of slugs){
+    if(bySlug.has(slug)) continue;
+    const {first, last} = parseSlugToNames(slug);
+    const fn = [first,last].filter(Boolean).join(" ").trim() || slug;
+    toAdd.push({
+      id: uuidv4(),
+      created_at: new Date().toISOString(),
+      owner: spec.owner, repo: spec.repo, branch: spec.branch, path: spec.path,
+      first, last, fn,
+      org: "", title: "",
+      phone_cc: "", phone_num: "",
+      wa_cc: "", wa_num: "",
+      email_user: "", email_domain: "",
+      ig_user: "",
+      maps: "", note: "",
+      advanced: false,
+      url: "", tg_user: "", work_cc: "", work_num: "",
+      adr_raw: "", categories: "",
+      has_photo: jpg.has(slug),
+      slug
+    });
+  }
+
+  if(toAdd.length === 0){
+    setStatus("No new cards found to add (or they already exist in contacts.json).", "ok");
+    await renderManager();
+    await renderQuick();
+    return;
+  }
+
+  const ok = confirm(`Found ${toAdd.length} new card(s) in your repo folder. Add them to ${spec.file}?`);
+  if(!ok){
+    setStatus("Discovery cancelled.", "warn");
+    return;
+  }
+
+  const merged = [...toAdd, ...existing];
+  await saveContactsOnline(merged);
+  setStatus(`Imported ${toAdd.length} card(s) from repo into ${spec.file}.`, "ok");
+  await renderManager();
+  await renderQuick();
+}
+
+
 /* =========================
    Tabs
 ========================= */
@@ -1617,11 +1854,126 @@ window.addEventListener("error", (e)=>{
     }
   }catch{}
 });
+
+/* =========================
+   GitHub VIEW-ONLY sync (does NOT save to Contacts Manager)
+========================= */
+let githubTempContacts = null;
+
+async function syncContactsFromGitHubViewOnly(){
+  try{
+    const token = $("token").value.trim();
+    if(!token) throw new Error("Paste your GitHub token first (needed to list repo files).");
+    const owner = $("owner").value.trim();
+    const repo  = $("repo").value.trim();
+    const branch= $("branch").value.trim() || "main";
+    const path  = $("path").value.trim();
+
+    setStatus("Sync (view-only): listing repo folder…");
+
+    const cleanPath = (path||"").replace(/^\/+|\/+$/g,"");
+    const api = `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath ? encodeURIComponent(cleanPath).replace(/%2F/g,"/") : ""}?ref=${encodeURIComponent(branch)}`;
+    const res = await fetch(api, {
+      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+    });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error(`GitHub list failed: ${res.status} ${t}`);
+    }
+    const items = await res.json();
+    if(!Array.isArray(items)) throw new Error("GitHub path is not a folder.");
+
+    const bySlug = new Map();
+    const take = (slug)=>{
+      if(!bySlug.has(slug)) bySlug.set(slug, { slug, has_html:false, has_vcf:false, has_photo:false });
+      return bySlug.get(slug);
+    };
+
+    for(const it of items){
+      if(!it || it.type !== "file" || !it.name) continue;
+      const m = it.name.match(/^(.+)\.(html|vcf|jpg|jpeg|png)$/i);
+      if(!m) continue;
+      const slug = m[1];
+      const ext = m[2].toLowerCase();
+      const rec = take(slug);
+      if(ext === "html") rec.has_html = true;
+      if(ext === "vcf") rec.has_vcf = true;
+      if(ext === "jpg" || ext === "jpeg" || ext === "png") rec.has_photo = true;
+    }
+
+    const cap = (x)=> x ? (x[0].toUpperCase()+x.slice(1)) : "";
+    const toName = (slug)=>{
+      const parts = String(slug||"").split("_").filter(Boolean);
+      if(parts.length>=2) return {first:cap(parts[0]), last:cap(parts.slice(1).join(" "))};
+      return {first:cap(parts[0]||""), last:""};
+    };
+
+    githubTempContacts = [];
+    for(const rec of bySlug.values()){
+      if(!rec.has_html && !rec.has_vcf) continue;
+      const p = toName(rec.slug);
+      githubTempContacts.push({
+        id: uuidv4(),
+        slug: rec.slug,
+        first: p.first,
+        last: p.last,
+        fn: [p.first,p.last].filter(Boolean).join(" ").trim(),
+        org: "",
+        title: "",
+        has_photo: rec.has_photo
+      });
+    }
+
+    renderManagerTemp();
+    setStatus(`Sync (view-only): loaded ${githubTempContacts.length} from GitHub.`, "ok");
+    showTab("manager");
+  }catch(e){
+    setStatus(e.message, "err");
+  }
+}
+
+function renderManagerTemp(){
+  const list = githubTempContacts || [];
+  $("managerCount").textContent = String(list.length);
+  const box = $("managerList");
+  box.innerHTML = "";
+  if(list.length === 0){
+    box.innerHTML = `<div class="item"><div class="nameLine"><b>No cards found in repo</b><span>Check owner/repo/path/branch.</span></div></div>`;
+    return;
+  }
+  list.forEach(c=>{
+    const name = c.fn || c.slug;
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div class="nameLine">
+        <b>${escapeHtml(name)}</b>
+        <span>${escapeHtml(c.slug)}</span>
+      </div>
+      <div class="itemActions">
+        <button class="mini" data-act="load" data-slug="${c.slug}">Load Slug</button>
+      </div>
+    `;
+    box.appendChild(el);
+  });
+
+  box.querySelectorAll("button[data-act='load']").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const slug = btn.getAttribute("data-slug");
+      if($("manualSlug")) $("manualSlug").value = slug;
+      setStatus(`Loaded slug from GitHub: ${slug} (view-only).`, "ok");
+      showTab("builder");
+      updatePreview();
+    });
+  });
+}
+
+
 /* =========================
    Init app
 ========================= */
 let appInited = false;
-function initApp(){
+async function initApp(){
   if(appInited) return;
   appInited = true;
 
@@ -1694,7 +2046,7 @@ function initApp(){
   });
 
   // save contact
-  $("saveContactBtn").addEventListener("click", ()=>{
+  $("saveContactBtn").addEventListener("click", async ()=>{
     const d = collect();
 
     // store split fields too (for editing later)
@@ -1720,7 +2072,7 @@ function initApp(){
       manual_slug: ($("manual_slug")?.value || "").trim()
     };
 
-    upsertContact(contact);
+    await upsertContact(contact);
     setStatus("Saved to Contacts Manager.", "ok");
   });
 
@@ -1780,16 +2132,30 @@ function initApp(){
     }
   });
 
+
+  // GitHub view-only sync (does NOT save to localStorage)
+    
+
+
+  // Reload online contacts.json from GitHub (does not rely on local storage)
+  if($("reloadOnlineBtn")) $("reloadOnlineBtn").addEventListener("click", async ()=>{
+    contactsLoadedOnce = false;
+    await loadContactsOnline();
+    await renderManager();
+    await renderQuick();
+    setStatus("Reloaded contacts from GitHub.", "ok");
+  });
+
   // quick manager refresh
-  $("refreshManagerBtn").addEventListener("click", ()=>{ renderQuick(); setStatus("Manager refreshed.", "ok"); });
+  $("refreshManagerBtn").addEventListener("click", async ()=>{ await renderQuick(); setStatus("Manager refreshed.", "ok"); });
 
   // manager search
-  $("search").addEventListener("input", renderManager);
+  $("search").addEventListener("input", async ()=>{ await renderManager(); });
 
   // load selected
   $("loadSelectedBtn").addEventListener("click", ()=>{
     if(!selectedId) return;
-    const c = loadContacts().find(x=>x.id===selectedId);
+    const c = (await loadContacts()).find(x=>x.id===selectedId);
     if(c) loadIntoBuilder(c);
   });
 
@@ -1798,15 +2164,15 @@ function initApp(){
     if(!selectedId) return;
     const ok = confirm("Delete selected contact?");
     if(!ok) return;
-    deleteContactById(selectedId);
+    await deleteContactById(selectedId);
     selectedId = null;
     renderSelectedMeta(null);
     setStatus("Deleted.", "ok");
   });
 
   // export/import contacts
-  $("exportContactsBtn").addEventListener("click", ()=>{
-    const data = loadContacts();
+  $("exportContactsBtn").addEventListener("click", async ()=>{
+    const data = await loadContacts();
     downloadText("cardx_contacts.json", JSON.stringify(data, null, 2));
   });
   $("importContactsBtn").addEventListener("click", ()=>$("importFile").click());
@@ -1819,10 +2185,10 @@ function initApp(){
       if(!Array.isArray(json)) throw new Error("Invalid JSON (expected array).");
       // basic sanitize
       json.forEach(c=>{ if(!c.id) c.id = uuidv4(); });
-      saveContacts(json);
+      await saveContacts(json);
       $("importFile").value = "";
-      renderManager();
-      renderQuick();
+      await renderManager();
+      await renderQuick();
       setStatus("Imported contacts.", "ok");
     }catch(e){
       setStatus(e.message, "err");
@@ -1847,8 +2213,8 @@ function initApp(){
 
   // initial render
   updatePreview();
-  renderQuick();
-  renderManager();
+  await renderQuick();
+  await renderManager();
   updateNameStatus();
 }
 
