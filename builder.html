@@ -1,159 +1,412 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CARDX Builder</title>
-  <style>
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#05060B;color:#fff}
-    .wrap{max-width:980px;margin:0 auto;padding:24px}
-    h1{margin:0 0 6px;font-size:28px}
-    p{margin:0 0 18px;color:rgba(255,255,255,.7)}
-    .card{background:rgba(14,16,28,.8);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    label{display:block;font-size:12px;color:rgba(255,255,255,.75);margin:6px 0}
-    input,textarea,select{
-      width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);color:#fff;outline:none
-    }
-    textarea{min-height:86px;resize:vertical}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    button{
-      padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.08);color:#fff;cursor:pointer
-    }
-    button:hover{border-color:rgba(58,128,246,.85)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:rgba(255,255,255,.75)}
-    .ok{color:#7CFF9A}
-    .warn{color:#FFD37C}
-    .err{color:#FF7C7C}
-    .full{grid-column:1/-1}
-    .previewBox{margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18)}
-    a{color:#7fb0ff}
-    .divider{height:1px;background:rgba(255,255,255,.10);margin:16px 0}
-    .toggleRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .small{font-size:12px;color:rgba(255,255,255,.68)}
-    .hidden{display:none}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06)
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>CARDX Builder Suite</title>
 
-    /* Integrated / half-field groups */
-    .group{display:flex;gap:8px;align-items:stretch}
-    .group input{border-radius:12px}
-    .group .fixed{
-      display:flex;align-items:center;justify-content:center;
-      padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);color:rgba(255,255,255,.85);
-      font-size:14px;white-space:nowrap
-    }
-    .group .cc{max-width:92px; text-align:center}
-    .group .user{min-width:0; flex: 1}
-    .group .domain{min-width:0; flex: 1}
-    .help{margin-top:6px}
-  </style>
+<!-- ZIP support (mobile compatible) -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<style>
+  :root{
+    --bg:#05060B;
+    --panel:rgba(14,16,28,.82);
+    --border:rgba(255,255,255,.10);
+    --muted:rgba(255,255,255,.70);
+    --muted2:rgba(255,255,255,.55);
+    --ok:#7CFF9A;
+    --warn:#FFD37C;
+    --err:#FF7C7C;
+    --accent:#3A80F6;
+    --u: clamp(11px, 1.15vw + 7px, 18px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:var(--bg);
+    color:#fff;
+  }
+  .bg{
+    position:fixed; inset:0; z-index:-1;
+    background:
+      radial-gradient(900px 520px at 18% 10%, rgba(58,128,246,0.28), transparent 60%),
+      radial-gradient(900px 520px at 82% 18%, rgba(58,128,246,0.14), transparent 60%),
+      linear-gradient(180deg, #05060B, #070914);
+  }
+  a{color:#7fb0ff}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  h1{margin:0 0 6px;font-size:22px}
+  .sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+  }
+
+  /* login */
+  .loginWrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .loginCard{
+    width:min(560px, 100%);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+  }
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:var(--muted2)}
+  label{display:block;font-size:12px;color:rgba(255,255,255,.78);margin:6px 0}
+  input,textarea,select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    color:#fff;
+    outline:none;
+    font-size:16px; /* mobile */
+  }
+  textarea{min-height:84px; resize:vertical}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  button{
+    padding:10px 14px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    cursor:pointer;
+  }
+  button:hover{border-color:rgba(58,128,246,.85)}
+  button.primary{
+    border-color:rgba(58,128,246,.55);
+    background:rgba(58,128,246,.18);
+  }
+  button.danger{
+    border-color:rgba(255,124,124,.55);
+    background:rgba(255,124,124,.12);
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+  }
+  .small{font-size:12px;color:var(--muted2)}
+
+  /* main layout */
+  .topBar{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .statusDot{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    font-size:12px;
+    color:var(--muted);
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.35)}
+  .dot.ok{background:var(--ok)}
+  .dot.warn{background:var(--warn)}
+  .dot.err{background:var(--err)}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  @media (min-width: 980px){
+    .grid{ grid-template-columns: 1.25fr .75fr; }
+  }
+
+  /* integrated fields */
+  .group{display:flex;gap:8px;align-items:stretch}
+  .fixed{
+    display:flex;align-items:center;justify-content:center;
+    padding:0 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.85);
+    white-space:nowrap;
+    font-size:14px;
+  }
+  .cc{max-width:92px;text-align:center}
+  .flex1{flex:1;min-width:0}
+  .help{margin-top:6px}
+  .full{grid-column:1/-1}
+  .divider{height:1px;background:rgba(255,255,255,.10);margin:14px 0}
+
+  .twoCol{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:720px){ .twoCol{grid-template-columns:1fr 1fr;} }
+
+  /* preview */
+  .previewBox{
+    margin-top:12px;
+    padding:12px;
+    border-radius:14px;
+    background:rgba(255,255,255,.05);
+    border:1px dashed rgba(255,255,255,.18);
+  }
+
+  /* contacts manager */
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .tabBtn{
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    color:#fff;
+  }
+  .tabBtn.active{
+    border-color:rgba(58,128,246,.75);
+    background:rgba(58,128,246,.18);
+  }
+  .panelTitle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .count{font-size:12px;color:var(--muted)}
+  .list{
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    overflow:hidden;
+    background:rgba(255,255,255,.03);
+  }
+  .item{
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .item:last-child{border-bottom:none}
+  .nameLine{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .nameLine b{font-size:14px}
+  .nameLine span{font-size:12px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .itemActions{display:flex;gap:8px;flex-wrap:wrap}
+  .mini{padding:8px 10px;font-size:12px}
+  .rightFiles{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:12px;
+    background:rgba(255,255,255,.03);
+  }
+  .fileRow{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .fileRow:last-child{border-bottom:none}
+  .fileRow code{font-size:12px;color:rgba(255,255,255,.8)}
+  .kbd{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    font-size:12px;
+    padding:2px 6px;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:8px;
+    background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.85);
+  }
+
+  /* modal */
+  .modalOverlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.65);
+    display:none; align-items:center; justify-content:center;
+    padding:16px; z-index:999;
+  }
+  .modal{
+    width:min(560px, 100%);
+    background:rgba(14,16,28,.95);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.65);
+  }
+  .modal h3{margin:0 0 6px;font-size:16px}
+  .modal p{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .modal .row{justify-content:flex-end}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>CARDX Contact Card Builder</h1>
-    <p>Generate + upload <span class="mono">firstname_lastname.html</span>, <span class="mono">.vcf</span>, <span class="mono">.jpg</span> to your GitHub repo.</p>
+  <div class="bg"></div>
 
-    <div class="card">
-      <div class="grid">
-        <div>
-          <label>GitHub Owner</label>
-          <input id="owner" value="cardxlb" />
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="loginWrap">
+    <div class="loginCard">
+      <h1 style="font-size:22px;margin:0 0 6px;">CARDX Builder Suite</h1>
+      <p class="sub" style="margin-bottom:10px;">
+        Local password gate (Option B). <span class="mono">Note:</span> this is a “speed bump”, not true server-side security.
+      </p>
+
+      <div class="divider"></div>
+
+      <label>Set / Change password</label>
+      <input id="setPass" type="password" placeholder="Create a password for this device" />
+      <div class="row">
+        <button class="primary" id="setPassBtn">Set Password</button>
+        <button class="danger" id="resetAllBtn">Reset Suite (clears saved data)</button>
+      </div>
+      <div class="mono help">Password is stored as a hash in <span class="kbd">localStorage</span>. No server.</div>
+
+      <div class="divider"></div>
+
+      <label>Login</label>
+      <input id="loginPass" type="password" placeholder="Enter password" />
+      <div class="row">
+        <button class="primary" id="loginBtn">Login</button>
+      </div>
+      <div id="loginStatus" class="mono" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- APP VIEW -->
+  <div id="appView" class="wrap" style="display:none;">
+    <div class="topBar">
+      <div>
+        <h1>CARDX Builder Suite</h1>
+        <p class="sub">Create / manage contact cards • ZIP downloads • GitHub upload • mobile compatible</p>
+      </div>
+      <div class="row" style="margin-top:0;">
+        <div id="nameStatus" class="statusDot">
+          <span id="nameDot" class="dot"></span>
+          <span id="nameText">Name status: —</span>
         </div>
-        <div>
-          <label>GitHub Repo</label>
-          <input id="repo" value="cardx" />
-        </div>
-        <div>
-          <label>Branch</label>
-          <input id="branch" value="main" />
-        </div>
-        <div>
-          <label>Folder path in repo (blank = root)</label>
-          <input id="path" placeholder="" />
+        <button id="logoutBtn" class="danger">Logout</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tabBtn active" id="tabBuilder">Builder</button>
+      <button class="tabBtn" id="tabManager">Contacts Manager</button>
+    </div>
+
+    <div id="builderPanel" class="grid">
+      <!-- left: builder form -->
+      <div class="card">
+        <div class="twoCol">
+          <div>
+            <label>GitHub Owner</label>
+            <input id="owner" value="cardxlb" />
+          </div>
+          <div>
+            <label>GitHub Repo</label>
+            <input id="repo" value="cardx" />
+          </div>
+          <div>
+            <label>Branch</label>
+            <input id="branch" value="main" />
+          </div>
+          <div>
+            <label>Folder path (blank = root)</label>
+            <input id="path" placeholder="" />
+          </div>
         </div>
 
-        <div class="full">
+        <div class="full" style="margin-top:10px;">
           <label>GitHub Token (Fine-grained PAT with Contents: Read/Write)</label>
-          <input id="token" type="password" placeholder="Paste token here (stored only in your browser)" />
-          <div class="mono help">Tip: saved in <b>localStorage</b> if you click “Save Token”.</div>
+          <input id="token" type="password" placeholder="Paste token here (stored locally if you save)" />
+          <div class="row">
+            <button id="saveTokenBtn">Save Token</button>
+            <button id="loadTokenBtn">Load Saved Token</button>
+            <button id="clearTokenBtn">Clear Saved Token</button>
+          </div>
+          <div class="mono help">Token is used only in your browser to call the GitHub API.</div>
         </div>
 
-        <div>
-          <label>First name</label>
-          <input id="first" value="Mahmoud" />
-        </div>
-        <div>
-          <label>Last name</label>
-          <input id="last" value="Chatila" />
+        <div class="divider"></div>
+
+        <div class="twoCol">
+          <div>
+            <label>First name</label>
+            <input id="first" value="Mahmoud" />
+          </div>
+          <div>
+            <label>Last name</label>
+            <input id="last" value="Chatila" />
+          </div>
         </div>
 
         <div class="full">
-          <label>Full display name (FN) (optional — defaults to First + Last)</label>
+          <label>Full display name (FN) (optional)</label>
           <input id="fn" value="Mahmoud Chatila" />
+          <div class="small help">If blank, it defaults to <span class="kbd">First Last</span>.</div>
         </div>
 
-        <div>
-          <label>Company (ORG) (optional)</label>
-          <input id="org" value="Chatila Financial Group" />
-        </div>
-        <div>
-          <label>Title (TITLE) (optional)</label>
-          <input id="title" value="Chief Executive Officer" />
+        <div class="twoCol">
+          <div>
+            <label>Company (ORG) (optional)</label>
+            <input id="org" value="Chatila Financial Group" />
+          </div>
+          <div>
+            <label>Title (TITLE) (optional)</label>
+            <input id="title" value="Chief Executive Officer" />
+          </div>
         </div>
 
-        <!-- Integrated PHONE -->
         <div class="full">
           <label>Phone (optional)</label>
           <div class="group">
             <span class="fixed">+</span>
             <input id="phone_cc" class="cc" inputmode="numeric" placeholder="cc" value="961" />
-            <input id="phone_num" class="user" inputmode="numeric" placeholder="number" value="78929249" />
+            <input id="phone_num" class="flex1" inputmode="numeric" placeholder="number" value="78929249" />
           </div>
-          <div class="small help">Produces: <span class="mono">+ccnumber</span> (E.164)</div>
+          <div class="small help">Produces: <span class="kbd">+ccnumber</span></div>
         </div>
 
-        <!-- Integrated WHATSAPP -->
         <div class="full">
           <label>WhatsApp (optional)</label>
           <div class="group">
             <span class="fixed">wa.me/</span>
             <input id="wa_cc" class="cc" inputmode="numeric" placeholder="cc" value="961" />
-            <input id="wa_num" class="user" inputmode="numeric" placeholder="number" value="78929249" />
+            <input id="wa_num" class="flex1" inputmode="numeric" placeholder="number" value="78929249" />
           </div>
-          <div class="small help">Produces: <span class="mono">https://wa.me/ccnumber</span></div>
+          <div class="small help">Produces: <span class="kbd">https://wa.me/ccnumber</span></div>
         </div>
 
-        <!-- Integrated EMAIL -->
         <div class="full">
           <label>Email (optional)</label>
           <div class="group">
-            <input id="email_user" class="user" placeholder="username" value="mahmoudchatila974" />
+            <input id="email_user" class="flex1" placeholder="username" value="mahmoudchatila974" />
             <span class="fixed">@</span>
-            <input id="email_domain" class="domain" placeholder="domain.com" value="gmail.com" />
+            <input id="email_domain" class="flex1" placeholder="domain.com" value="gmail.com" />
           </div>
-          <div class="small help">Produces: <span class="mono">username@domain.com</span></div>
+          <div class="small help">Produces: <span class="kbd">username@domain.com</span></div>
         </div>
 
-        <!-- Instagram username only -->
         <div class="full">
           <label>Instagram (optional)</label>
           <div class="group">
             <span class="fixed">instagram.com/</span>
-            <input id="ig_user" class="user" placeholder="username" value="mahmoud__chatila" />
+            <input id="ig_user" class="flex1" placeholder="username" value="mahmoud__chatila" />
           </div>
-          <div class="small help">Produces: <span class="mono">https://instagram.com/username</span></div>
+          <div class="small help">Produces: <span class="kbd">https://instagram.com/username</span></div>
         </div>
 
         <div class="full">
-          <label>Location URL (Google Maps link) (optional)</label>
+          <label>Location URL (optional)</label>
           <input id="maps" value="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7" />
         </div>
 
@@ -168,23 +421,18 @@
           <div class="mono help" id="photoInfo">No image selected.</div>
         </div>
 
-        <div class="full divider"></div>
+        <div class="divider"></div>
 
-        <!-- Advanced toggle -->
-        <div class="full toggleRow">
-          <div>
-            <div class="pill">
-              <input id="showAdvanced" type="checkbox" />
-              <label for="showAdvanced" style="margin:0;cursor:pointer;">Show advanced fields</label>
-            </div>
-            <div class="small">Default stays simple. Advanced adds extra vCard + extra buttons. Empty advanced fields won’t show.</div>
+        <div class="full" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div class="pill">
+            <input id="showAdvanced" type="checkbox" />
+            <label for="showAdvanced" style="margin:0;cursor:pointer;">Show advanced fields</label>
           </div>
-          <div class="small mono" id="existsLine">—</div>
+          <span class="small">Empty fields don’t show on the generated card.</span>
         </div>
 
-        <!-- ADVANCED FIELDS (hidden by default) -->
         <div id="advancedSection" class="full hidden">
-          <div class="grid" style="margin-top:12px">
+          <div class="twoCol" style="margin-top:10px;">
             <div class="full">
               <label>Website URL (optional)</label>
               <input id="url" placeholder="https://example.com" />
@@ -194,7 +442,7 @@
               <label>Telegram username (optional)</label>
               <div class="group">
                 <span class="fixed">t.me/</span>
-                <input id="tg_user" class="user" placeholder="username" />
+                <input id="tg_user" class="flex1" placeholder="username" />
               </div>
             </div>
 
@@ -203,14 +451,14 @@
               <div class="group">
                 <span class="fixed">+</span>
                 <input id="work_cc" class="cc" inputmode="numeric" placeholder="cc" />
-                <input id="work_num" class="user" inputmode="numeric" placeholder="number" />
+                <input id="work_num" class="flex1" inputmode="numeric" placeholder="number" />
               </div>
             </div>
 
             <div class="full">
               <label>Address (ADR) (optional)</label>
               <input id="adr" placeholder="Street;City;Region;Postal;Country" />
-              <div class="small help">Example: <span class="mono">Verdun;Beirut;;;Lebanon</span></div>
+              <div class="small help">Example: <span class="kbd">Verdun;Beirut;;;Lebanon</span></div>
             </div>
 
             <div class="full">
@@ -219,149 +467,371 @@
             </div>
           </div>
         </div>
+
+        <div class="previewBox">
+          <div class="mono">Slug / filenames:</div>
+          <div class="mono" id="slugLine">—</div>
+          <div class="mono" style="margin-top:8px;">Expected GitHub Pages URLs:</div>
+          <div class="mono" id="urlsLine">—</div>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="saveContactBtn">Save to Manager</button>
+          <button id="downloadZipBtn">Download ZIP</button>
+          <button class="primary" id="uploadBtn">Upload to GitHub</button>
+        </div>
+
+        <div class="mono" style="margin-top:12px;" id="status"></div>
       </div>
 
-      <div class="previewBox">
-        <div class="mono">Slug / filenames:</div>
-        <div class="mono" id="slugLine">—</div>
-        <div class="mono" style="margin-top:8px;">Expected GitHub Pages URLs:</div>
-        <div class="mono" id="urlsLine">—</div>
+      <!-- right: quick manager / file actions -->
+      <div class="card">
+        <div class="panelTitle">
+          <div>
+            <b>Quick Manager</b>
+            <div class="count" id="quickCount">0 contacts</div>
+          </div>
+          <button id="refreshManagerBtn" class="mini">Refresh</button>
+        </div>
+
+        <div class="list" id="quickList"></div>
+
+        <div class="rightFiles" id="filesPanel">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px;">
+            <b>Current files</b>
+            <span class="small">for <span class="kbd" id="filesSlug">—</span></span>
+          </div>
+
+          <div class="fileRow">
+            <code id="fileHtml">—</code>
+            <div class="itemActions">
+              <button class="mini" id="dlHtml">Download</button>
+            </div>
+          </div>
+          <div class="fileRow">
+            <code id="fileVcf">—</code>
+            <div class="itemActions">
+              <button class="mini" id="dlVcf">Download</button>
+            </div>
+          </div>
+          <div class="fileRow">
+            <code id="fileJpg">—</code>
+            <div class="itemActions">
+              <button class="mini" id="dlJpg">Download</button>
+            </div>
+          </div>
+          <div class="small">Downloads use locally generated content (ZIP uses same).</div>
+        </div>
       </div>
+    </div>
+
+    <!-- CONTACTS MANAGER PANEL -->
+    <div id="managerPanel" class="grid" style="display:none;">
+      <div class="card">
+        <div class="panelTitle">
+          <div>
+            <b>Contacts</b>
+            <div class="count"><span id="managerCount">0</span> persons</div>
+          </div>
+          <div class="row" style="margin-top:0;">
+            <button id="exportContactsBtn" class="mini">Export JSON</button>
+            <button id="importContactsBtn" class="mini">Import JSON</button>
+            <input id="importFile" type="file" accept="application/json" class="hidden" />
+          </div>
+        </div>
+
+        <div class="full">
+          <label>Search</label>
+          <input id="search" placeholder="Search name / company / username" />
+        </div>
+
+        <div class="list" id="managerList"></div>
+        <div class="mono" style="margin-top:10px;">Tip: Select a contact to load it into Builder for editing.</div>
+      </div>
+
+      <div class="card">
+        <div class="panelTitle">
+          <div>
+            <b>Selected Contact</b>
+            <div class="count" id="selectedMeta">—</div>
+          </div>
+          <button id="loadSelectedBtn" class="mini primary">Load into Builder</button>
+        </div>
+
+        <div class="rightFiles">
+          <b>Files for selected</b>
+          <div class="small" style="margin-top:6px;">Shown as they would be generated from fields:</div>
+          <div class="fileRow"><code id="selHtml">—</code><span class="small">.html</span></div>
+          <div class="fileRow"><code id="selVcf">—</code><span class="small">.vcf</span></div>
+          <div class="fileRow"><code id="selJpg">—</code><span class="small">.jpg (if photo)</span></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button id="deleteSelectedBtn" class="danger">Delete</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Upload decision modal -->
+  <div class="modalOverlay" id="uploadModal">
+    <div class="modal">
+      <h3>Name already exists</h3>
+      <p>
+        A card with this name/slug already exists in your repo. Choose what to do:
+      </p>
+
+      <label>New first name</label>
+      <input id="renameFirst" placeholder="First name" />
+      <label>New last name</label>
+      <input id="renameLast" placeholder="Last name" />
 
       <div class="row">
-        <button id="saveTokenBtn">Save Token</button>
-        <button id="loadTokenBtn">Load Saved Token</button>
-        <button id="clearTokenBtn">Clear Saved Token</button>
-        <button id="downloadBtn">Download files</button>
-        <button id="uploadBtn">Upload to GitHub</button>
+        <button id="cancelUpload" class="mini">Cancel</button>
+        <button id="renameUpload" class="mini">Rename & Upload</button>
+        <button id="overwriteUpload" class="mini primary">Overwrite</button>
       </div>
-
-      <div class="mono" style="margin-top:12px;" id="status"></div>
+      <div class="mono" style="margin-top:8px;">
+        Tip: Renaming updates filenames to <span class="kbd">firstname_lastname.*</span>
+      </div>
     </div>
   </div>
 
 <script>
-  const $ = (id)=>document.getElementById(id);
+/* =========================
+   Utilities
+========================= */
+const $ = (id)=>document.getElementById(id);
+const LS = {
+  passHash: "cardx_suite_passhash",
+  session: "cardx_suite_session",
+  token: "cardx_github_token",
+  contacts: "cardx_contacts_v1",
+};
 
-  function slugify(first, last){
-    const clean = (s)=> (s||"")
-      .trim().toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
-    const a = clean(first), b = clean(last);
-    return [a,b].filter(Boolean).join("_") || "contact";
-  }
+function setStatus(msg, cls=""){
+  const el = $("status");
+  el.className = "mono " + cls;
+  el.textContent = msg;
+}
+function setLoginStatus(msg, cls=""){
+  const el = $("loginStatus");
+  el.className = "mono " + cls;
+  el.textContent = msg;
+}
+function digitsOnly(s){ return String(s||"").replace(/\D/g,""); }
 
-  function digitsOnly(s){ return String(s||"").replace(/\D/g,""); }
+function slugify(first, last){
+  const clean = (s)=> (s||"")
+    .trim().toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+  const a = clean(first), b = clean(last);
+  return [a,b].filter(Boolean).join("_") || "contact";
+}
 
-  function base64FromText(text){
-    return btoa(unescape(encodeURIComponent(text)));
-  }
+function normalizeInstagram(user){
+  const u = String(user||"").trim().replace(/^@/,"");
+  return u ? `https://instagram.com/${u}` : "";
+}
 
-  function filePathJoin(path, filename){
-    if(!path) return filename;
-    return path.replace(/\/+$/,"") + "/" + filename;
-  }
+function buildEmail(user, domain){
+  const u = String(user||"").trim();
+  let d = String(domain||"").trim().replace(/^@/,"");
+  if(!u || !d) return "";
 
-  function normalizeInstagram(user){
-    const u = String(user||"").trim().replace(/^@/,"");
-    return u ? `https://instagram.com/${u}` : "";
-  }
-
-  function buildEmail(user, domain){
-    const u = String(user||"").trim();
-    const d = String(domain||"").trim().replace(/^@/,"");
-    if(!u || !d) return "";
-    return `${u}@${d}`;
-  }
-
-  function buildE164(cc, num){
-    const c = digitsOnly(cc);
-    const n = digitsOnly(num);
-    if(!c || !n) return "";
-    return `+${c}${n}`;
-  }
-
-  function buildWaDigits(cc, num){
-    const c = digitsOnly(cc);
-    const n = digitsOnly(num);
-    if(!c || !n) return "";
-    return `${c}${n}`;
-  }
-
-  function buildAdrLine(adrRaw){
-    const s = String(adrRaw||"").trim();
-    if(!s) return "";
-    const parts = s.split(";").map(x=>x.trim());
-    const street = parts[0] || "";
-    const city   = parts[1] || "";
-    const region = parts[2] || "";
-    const postal = parts[3] || "";
-    const country= parts[4] || "";
-    return `ADR;TYPE=WORK:;;${street};${city};${region};${postal};${country}`;
-  }
-
-  function buildVcf(data){
-    const lines = [
-      "BEGIN:VCARD",
-      "VERSION:3.0",
-      `N:${data.last};${data.first};;;`,
-      `FN:${data.fn}`,
-      data.org ? `ORG:${data.org}` : "",
-      data.title ? `TITLE:${data.title}` : "",
-      data.tel_e164 ? `TEL;TYPE=CELL:${data.tel_e164}` : "",
-      data.email ? `EMAIL;TYPE=INTERNET:${data.email}` : "",
-      data.note ? `NOTE:${data.note.replace(/\n/g,"\\n")}` : "",
-    ];
-
-    if(data.advanced){
-      if(data.url) lines.push(`URL:${data.url}`);
-      if(data.tg_user) lines.push(`X-SOCIALPROFILE;TYPE=telegram:https://t.me/${data.tg_user}`);
-      if(data.work_e164) lines.push(`TEL;TYPE=WORK:${data.work_e164}`);
-      const adrLine = buildAdrLine(data.adr_raw);
-      if(adrLine) lines.push(adrLine);
-      if(data.categories) lines.push(`CATEGORIES:${data.categories}`);
+  // Prevent user from putting "@gmail.com" in the username field:
+  // if they typed an email in the username field, split it.
+  if(u.includes("@")){
+    const parts = u.split("@");
+    const left = parts[0] || "";
+    const right = parts[1] || "";
+    if(left){
+      // move domain to domain field if empty or different
+      if(right) d = right;
+      $("email_user").value = left;
+      $("email_domain").value = d;
+      return `${left}@${d}`;
     }
-
-    lines.push("END:VCARD");
-    return lines.filter(Boolean).join("\n");
   }
+  // Also if they typed gmail.com in user field, move it away
+  if(u.toLowerCase().endsWith("gmail.com")){
+    const fixed = u.replace(/@?gmail\.com$/i,"").replace(/@$/,"");
+    if(fixed){
+      $("email_user").value = fixed;
+      if(!$("email_domain").value.trim()) $("email_domain").value = "gmail.com";
+      d = $("email_domain").value.trim() || "gmail.com";
+      return `${fixed}@${d}`;
+    }
+  }
+  return `${u}@${d}`;
+}
 
-  function buildHtml(data){
-    const owner = data.owner, repo = data.repo, branch = data.branch, path = data.path;
-    const slug = data.slug;
+function buildE164(cc, num){
+  const c = digitsOnly(cc);
+  const n = digitsOnly(num);
+  if(!c || !n) return "";
+  return `+${c}${n}`;
+}
 
-    const basePages = `https://${owner}.github.io/${repo}`;
-    const prefix = path ? path.replace(/^\/+|\/+$/g,"") + "/" : "";
-    const vcfUrl = `${basePages}/${prefix}${slug}.vcf`;
+function buildWaDigits(cc, num){
+  const c = digitsOnly(cc);
+  const n = digitsOnly(num);
+  if(!c || !n) return "";
+  return `${c}${n}`;
+}
 
-    const hasPhoto = !!data.has_photo;
-    const imgRaw = hasPhoto
-      ? `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${slug}.jpg`
-      : "";
+function base64FromText(text){
+  return btoa(unescape(encodeURIComponent(text)));
+}
 
-    const igUrl = data.ig_url || "";
-    const waLink = data.wa_digits ? `https://wa.me/${data.wa_digits}` : "";
-    const telLink = data.tel_e164 ? `tel:${data.tel_e164}` : "";
-    const mailLink = data.email ? `mailto:${data.email}` : "";
+function filePathJoin(path, filename){
+  if(!path) return filename;
+  return path.replace(/\/+$/,"") + "/" + filename;
+}
 
-    const showSubtitle = !!(data.title || data.org);
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g, m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[m]));
+}
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
 
-    const extraButtons = data.advanced ? `
-        ${data.url ? `
-        <a class="btn" href="${escapeAttr(data.url)}">
-          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/globe2.svg" alt="">
-          <span>Website</span><span></span>
-        </a>` : ""}
+/* =========================
+   Login (Option B - local)
+========================= */
+async function sha256(str){
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
-        ${data.tg_user ? `
-        <a class="btn" href="https://t.me/${escapeAttr(data.tg_user)}">
-          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/send.svg" alt="">
-          <span>Telegram</span><span></span>
-        </a>` : ""}
-    ` : "";
+async function setPassword(){
+  const p = $("setPass").value;
+  if(!p || p.length < 6){
+    setLoginStatus("Use at least 6 characters.", "warn");
+    return;
+  }
+  const h = await sha256(p);
+  localStorage.setItem(LS.passHash, h);
+  setLoginStatus("Password set for this device. Now login below.", "ok");
+  $("setPass").value = "";
+}
 
-    return `<!DOCTYPE html>
+async function login(){
+  const hSaved = localStorage.getItem(LS.passHash);
+  if(!hSaved){
+    setLoginStatus("Set a password first.", "warn");
+    return;
+  }
+  const p = $("loginPass").value;
+  const h = await sha256(p);
+  if(h !== hSaved){
+    setLoginStatus("Wrong password.", "err");
+    return;
+  }
+  sessionStorage.setItem(LS.session, "1");
+  $("loginPass").value = "";
+  showApp();
+}
+
+function logout(){
+  sessionStorage.removeItem(LS.session);
+  $("appView").style.display = "none";
+  $("loginView").style.display = "flex";
+  setLoginStatus("Logged out.", "ok");
+}
+
+function resetSuite(){
+  const ok = confirm("This clears saved contacts + token + password hash from this browser. Continue?");
+  if(!ok) return;
+  localStorage.removeItem(LS.passHash);
+  localStorage.removeItem(LS.contacts);
+  localStorage.removeItem(LS.token);
+  sessionStorage.removeItem(LS.session);
+  $("setPass").value = "";
+  $("loginPass").value = "";
+  setLoginStatus("Suite reset. Set a new password.", "ok");
+}
+
+function showApp(){
+  $("loginView").style.display = "none";
+  $("appView").style.display = "block";
+  initApp();
+}
+
+/* =========================
+   vCard / HTML generators
+========================= */
+function buildAdrLine(adrRaw){
+  const s = String(adrRaw||"").trim();
+  if(!s) return "";
+  const parts = s.split(";").map(x=>x.trim());
+  const street = parts[0] || "";
+  const city   = parts[1] || "";
+  const region = parts[2] || "";
+  const postal = parts[3] || "";
+  const country= parts[4] || "";
+  return `ADR;TYPE=WORK:;;${street};${city};${region};${postal};${country}`;
+}
+
+function buildVcf(data){
+  const lines = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `N:${data.last};${data.first};;;`,
+    `FN:${data.fn}`,
+    data.org ? `ORG:${data.org}` : "",
+    data.title ? `TITLE:${data.title}` : "",
+    data.tel_e164 ? `TEL;TYPE=CELL:${data.tel_e164}` : "",
+    data.work_e164 ? `TEL;TYPE=WORK:${data.work_e164}` : "",
+    data.email ? `EMAIL;TYPE=INTERNET:${data.email}` : "",
+    data.note ? `NOTE:${data.note.replace(/\n/g,"\\n")}` : "",
+    data.url ? `URL:${data.url}` : "",
+    data.tg_user ? `X-SOCIALPROFILE;TYPE=telegram:https://t.me/${data.tg_user}` : "",
+    buildAdrLine(data.adr_raw),
+    data.categories ? `CATEGORIES:${data.categories}` : "",
+    "END:VCARD"
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+function buildHtml(data){
+  const owner = data.owner, repo = data.repo, branch = data.branch, path = data.path;
+  const slug = data.slug;
+
+  const basePages = `https://${owner}.github.io/${repo}`;
+  const prefix = path ? path.replace(/^\/+|\/+$/g,"") + "/" : "";
+  const vcfUrl = `${basePages}/${prefix}${slug}.vcf`;
+
+  const hasPhoto = !!data.has_photo;
+  const imgRaw = hasPhoto
+    ? `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${slug}.jpg`
+    : "";
+
+  const igUrl = data.ig_url || "";
+  const waLink = data.wa_digits ? `https://wa.me/${data.wa_digits}` : "";
+  const telLink = data.tel_e164 ? `tel:${data.tel_e164}` : "";
+  const mailLink = data.email ? `mailto:${data.email}` : "";
+  const showSubtitle = !!(data.title || data.org);
+
+  const extraButtons = data.advanced ? `
+    ${data.url ? `
+    <a class="btn" href="${escapeAttr(data.url)}">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/globe2.svg" alt="">
+      <span>Website</span><span></span>
+    </a>` : ""}
+    ${data.tg_user ? `
+    <a class="btn" href="https://t.me/${escapeAttr(data.tg_user)}">
+      <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/send.svg" alt="">
+      <span>Telegram</span><span></span>
+    </a>` : ""}
+  ` : "";
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -501,7 +971,6 @@
     <div class="stack">
       <div class="container">
         ${hasPhoto ? `<img src="${imgRaw}" class="profile" alt="Profile Photo" />` : ""}
-
         <h1>${escapeHtml(data.fn)}</h1>
         ${showSubtitle ? `<h2>${escapeHtml(data.title || "")}${(data.title && data.org) ? " – " : ""}${escapeHtml(data.org || "")}</h2>` : ""}
 
@@ -550,156 +1019,584 @@
   </main>
 </body>
 </html>`;
-  }
+}
 
-  function escapeHtml(s){
-    return String(s||"").replace(/[&<>"']/g, m=>({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[m]));
-  }
-  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+/* =========================
+   Collect current form data
+========================= */
+function collect(){
+  const owner = $("owner").value.trim();
+  const repo = $("repo").value.trim();
+  const branch = $("branch").value.trim() || "main";
+  const path = $("path").value.trim().replace(/^\/+|\/+$/g,"");
 
-  function collect(){
-    const owner = $("owner").value.trim();
-    const repo = $("repo").value.trim();
-    const branch = $("branch").value.trim() || "main";
-    const path = $("path").value.trim().replace(/^\/+|\/+$/g,"");
+  const first = $("first").value.trim();
+  const last  = $("last").value.trim();
+  const slug  = slugify(first,last);
 
-    const first = $("first").value.trim();
-    const last  = $("last").value.trim();
-    const slug  = slugify(first,last);
+  const fallbackFN = [first,last].filter(Boolean).join(" ").trim();
+  const fn = $("fn").value.trim() || fallbackFN || slug;
 
-    const fallbackFN = [first,last].filter(Boolean).join(" ").trim();
-    const fn = $("fn").value.trim() || fallbackFN || slug;
+  // sanitize email: avoid @ in username
+  const email = buildEmail($("email_user").value, $("email_domain").value);
 
-    const tel_e164  = buildE164($("phone_cc").value, $("phone_num").value);
-    const wa_digits = buildWaDigits($("wa_cc").value, $("wa_num").value);
+  const tel_e164  = buildE164($("phone_cc").value, $("phone_num").value);
+  const wa_digits = buildWaDigits($("wa_cc").value, $("wa_num").value);
+  const ig_url    = normalizeInstagram($("ig_user").value);
 
-    const email = buildEmail($("email_user").value, $("email_domain").value);
-    const ig_url = normalizeInstagram($("ig_user").value);
+  const advanced = $("showAdvanced").checked;
 
-    const advanced = $("showAdvanced").checked;
+  const work_e164 = advanced ? buildE164($("work_cc").value, $("work_num").value) : "";
+  const url = advanced ? $("url").value.trim() : "";
+  const tg_user = advanced ? $("tg_user").value.trim().replace(/^@/,"") : "";
+  const adr_raw = advanced ? $("adr").value.trim() : "";
+  const categories = advanced ? $("categories").value.trim().replace(/\s*,\s*/g, ",") : "";
 
-    const work_e164 = advanced ? buildE164($("work_cc").value, $("work_num").value) : "";
-    const url = advanced ? $("url").value.trim() : "";
-    const tg_user = advanced ? $("tg_user").value.trim().replace(/^@/,"") : "";
-    const adr_raw = advanced ? $("adr").value.trim() : "";
-    const categories = advanced ? $("categories").value.trim().replace(/\s*,\s*/g, ",") : "";
+  const has_photo = !!($("photo").files?.[0]);
 
-    const has_photo = !!($("photo").files?.[0]);
+  return {
+    owner, repo, branch, path,
+    first, last, slug,
+    fn,
+    org: $("org").value.trim(),
+    title: $("title").value.trim(),
+    tel_e164,
+    wa_digits,
+    email,
+    ig_url,
+    maps: $("maps").value.trim(),
+    note: $("note").value.trim(),
+    has_photo,
+    advanced,
+    work_e164, url, tg_user, adr_raw, categories
+  };
+}
 
-    return {
-      owner, repo, branch, path,
-      first, last, slug,
-      fn,
-      org: $("org").value.trim(),
-      title: $("title").value.trim(),
-      tel_e164,
-      wa_digits,
-      email,
-      ig_url,
-      maps: $("maps").value.trim(),
-      note: $("note").value.trim(),
-      has_photo,
-      advanced,
-      // advanced extras
-      work_e164, url, tg_user, adr_raw, categories
-    };
-  }
+/* =========================
+   Preview + file panel
+========================= */
+function updatePreview(){
+  const d = collect();
+  $("slugLine").textContent = `${d.slug}.html | ${d.slug}.vcf` + (d.has_photo ? ` | ${d.slug}.jpg` : ``);
 
-  function updatePreview(){
+  const basePages = `https://${d.owner}.github.io/${d.repo}`;
+  const prefix = d.path ? `/${d.path}` : "";
+  $("urlsLine").innerHTML =
+    `<a href="${basePages}${prefix}/${d.slug}.html" target="_blank">${basePages}${prefix}/${d.slug}.html</a><br>` +
+    `<a href="${basePages}${prefix}/${d.slug}.vcf" target="_blank">${basePages}${prefix}/${d.slug}.vcf</a>`;
+
+  // right file panel labels (local)
+  $("filesSlug").textContent = d.slug;
+  $("fileHtml").textContent = `${d.slug}.html`;
+  $("fileVcf").textContent = `${d.slug}.vcf`;
+  $("fileJpg").textContent = d.has_photo ? `${d.slug}.jpg` : "(no photo)";
+}
+
+/* =========================
+   Name status (colored)
+========================= */
+function setNameStatus(state, text){
+  const dot = $("nameDot");
+  dot.classList.remove("ok","warn","err");
+  if(state) dot.classList.add(state);
+  $("nameText").textContent = text;
+}
+
+async function checkIfExists({owner, repo, token, path, filename}){
+  const fullPath = filePathJoin(path, filename);
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+  const res = await fetch(url, {
+    headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+  });
+  return res.ok;
+}
+
+async function updateNameStatus(){
+  try{
+    const token = $("token").value.trim();
     const d = collect();
-    $("slugLine").textContent = `${d.slug}.html | ${d.slug}.vcf` + (d.has_photo ? ` | ${d.slug}.jpg` : ``);
-
-    const basePages = `https://${d.owner}.github.io/${d.repo}`;
-    const prefix = d.path ? `/${d.path}` : "";
-    $("urlsLine").innerHTML =
-      `<a href="${basePages}${prefix}/${d.slug}.html" target="_blank">${basePages}${prefix}/${d.slug}.html</a><br>` +
-      `<a href="${basePages}${prefix}/${d.slug}.vcf" target="_blank">${basePages}${prefix}/${d.slug}.vcf</a>`;
-  }
-
-  async function readImageBase64(file){
-    const dataUrl = await new Promise((resolve,reject)=>{
-      const r = new FileReader();
-      r.onload = ()=>resolve(r.result);
-      r.onerror = ()=>reject(new Error("Failed to read image"));
-      r.readAsDataURL(file);
-    });
-    const [, b64] = String(dataUrl).split(",");
-    return { base64: b64 };
-  }
-
-  async function checkIfExists({owner, repo, token, path, filename}){
-    const fullPath = filePathJoin(path, filename);
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
-    const res = await fetch(url, {
-      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
-    });
-    return res.ok;
-  }
-
-  async function putFile({owner, repo, branch, token, path, filename, contentBase64, message}){
-    const fullPath = filePathJoin(path, filename);
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
-
-    let sha = null;
-    const getRes = await fetch(url, {
-      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
-    });
-    if(getRes.ok){
-      const j = await getRes.json();
-      sha = j.sha;
+    if(!token){
+      setNameStatus("warn", "Name status: token required to check");
+      return;
     }
-
-    const body = { message, content: contentBase64, branch };
-    if(sha) body.sha = sha;
-
-    const putRes = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
+    setNameStatus(null, "Name status: checking…");
+    const exists = await checkIfExists({
+      owner: d.owner, repo: d.repo, token,
+      path: d.path,
+      filename: `${d.slug}.html`
     });
-
-    if(!putRes.ok){
-      const t = await putRes.text();
-      throw new Error(`Upload failed for ${filename}: ${putRes.status} ${t}`);
-    }
-    return await putRes.json();
+    if(exists) setNameStatus("warn", "Name status: EXISTS (will prompt on upload)");
+    else setNameStatus("ok", "Name status: AVAILABLE");
+  }catch{
+    setNameStatus("err", "Name status: check failed");
   }
+}
 
-  function setStatus(msg, cls="mono"){
-    const el = $("status");
-    el.className = "mono " + (cls || "");
-    el.textContent = msg;
+/* =========================
+   Contacts Manager (local)
+========================= */
+function loadContacts(){
+  try{
+    const raw = localStorage.getItem(LS.contacts);
+    return raw ? JSON.parse(raw) : [];
+  }catch{
+    return [];
   }
+}
+function saveContacts(list){
+  localStorage.setItem(LS.contacts, JSON.stringify(list));
+}
 
-  async function updateExistsBadge(){
-    try{
-      const token = $("token").value.trim();
-      const d = collect();
-      if(!token){
-        $("existsLine").textContent = "Name status: (token required)";
-        $("existsLine").className = "small mono warn";
-        return;
+function contactKey(c){
+  // stable identifier
+  return c.id || (c.id = crypto.randomUUID());
+}
+
+function upsertContact(contact){
+  const list = loadContacts();
+  const id = contactKey(contact);
+  const idx = list.findIndex(x=>x.id === id);
+  if(idx >= 0) list[idx] = contact;
+  else list.unshift(contact);
+  saveContacts(list);
+  renderManager();
+  renderQuick();
+}
+
+function deleteContactById(id){
+  const list = loadContacts().filter(x=>x.id !== id);
+  saveContacts(list);
+  renderManager();
+  renderQuick();
+}
+
+function contactDisplay(c){
+  const name = (c.fn || [c.first,c.last].filter(Boolean).join(" ").trim() || c.slug || "Unnamed");
+  const meta = [c.org, c.title].filter(Boolean).join(" • ");
+  return {name, meta};
+}
+
+let selectedId = null;
+
+function renderQuick(){
+  const list = loadContacts();
+  $("quickCount").textContent = `${list.length} contacts`;
+  const box = $("quickList");
+  box.innerHTML = "";
+  if(list.length === 0){
+    box.innerHTML = `<div class="item"><div class="nameLine"><b>No saved contacts</b><span>Create one and press “Save to Manager”.</span></div></div>`;
+    return;
+  }
+  list.slice(0,8).forEach(c=>{
+    const {name, meta} = contactDisplay(c);
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div class="nameLine">
+        <b>${escapeHtml(name)}</b>
+        <span>${escapeHtml(meta || c.slug || "")}</span>
+      </div>
+      <div class="itemActions">
+        <button class="mini" data-act="load" data-id="${c.id}">Load</button>
+        <button class="mini danger" data-act="del" data-id="${c.id}">Delete</button>
+      </div>
+    `;
+    box.appendChild(el);
+  });
+
+  box.querySelectorAll("button[data-act]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-id");
+      const act = btn.getAttribute("data-act");
+      if(act === "load"){
+        const c = loadContacts().find(x=>x.id===id);
+        if(c) loadIntoBuilder(c);
+      }else if(act === "del"){
+        if(confirm("Delete this contact from manager?")) deleteContactById(id);
       }
-      const exists = await checkIfExists({
-        owner: d.owner, repo: d.repo, token,
-        path: d.path,
-        filename: `${d.slug}.html`
-      });
-      $("existsLine").textContent = exists ? "Name status: EXISTS" : "Name status: AVAILABLE";
-      $("existsLine").className = "small mono " + (exists ? "warn" : "ok");
-    }catch{
-      $("existsLine").textContent = "Name status: (check failed)";
-      $("existsLine").className = "small mono warn";
-    }
+    });
+  });
+}
+
+function renderManager(){
+  const list = loadContacts();
+  $("managerCount").textContent = String(list.length);
+
+  const q = $("search").value.trim().toLowerCase();
+  const filtered = !q ? list : list.filter(c=>{
+    const {name, meta} = contactDisplay(c);
+    const hay = (name+" "+meta+" "+(c.slug||"")+" "+(c.ig_user||"")+" "+(c.email||"")).toLowerCase();
+    return hay.includes(q);
+  });
+
+  const box = $("managerList");
+  box.innerHTML = "";
+  if(filtered.length === 0){
+    box.innerHTML = `<div class="item"><div class="nameLine"><b>No matches</b><span>Try a different search.</span></div></div>`;
+  }else{
+    filtered.forEach(c=>{
+      const {name, meta} = contactDisplay(c);
+      const el = document.createElement("div");
+      el.className = "item";
+      const isSel = c.id === selectedId;
+      el.innerHTML = `
+        <div class="nameLine" style="${isSel?'outline:1px solid rgba(58,128,246,.55); padding:8px 10px; border-radius:12px;':''}">
+          <b>${escapeHtml(name)}</b>
+          <span>${escapeHtml(meta || c.slug || "")}</span>
+        </div>
+        <div class="itemActions">
+          <button class="mini" data-act="select" data-id="${c.id}">Select</button>
+          <button class="mini" data-act="load" data-id="${c.id}">Load</button>
+          <button class="mini danger" data-act="del" data-id="${c.id}">Delete</button>
+        </div>
+      `;
+      box.appendChild(el);
+    });
   }
 
-  // events
+  box.querySelectorAll("button[data-act]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-id");
+      const act = btn.getAttribute("data-act");
+      if(act === "select"){
+        selectedId = id;
+        const c = loadContacts().find(x=>x.id===id);
+        renderSelectedMeta(c);
+        renderManager();
+      }else if(act === "load"){
+        const c = loadContacts().find(x=>x.id===id);
+        if(c) loadIntoBuilder(c);
+      }else if(act === "del"){
+        if(confirm("Delete this contact from manager?")) {
+          if(selectedId===id) selectedId=null;
+          deleteContactById(id);
+          renderSelectedMeta(null);
+        }
+      }
+    });
+  });
+
+  // quick selected panel update if not yet set
+  if(selectedId){
+    const c = loadContacts().find(x=>x.id===selectedId) || null;
+    renderSelectedMeta(c);
+  }else{
+    renderSelectedMeta(null);
+  }
+}
+
+function renderSelectedMeta(c){
+  if(!c){
+    $("selectedMeta").textContent = "None selected";
+    $("selHtml").textContent = "—";
+    $("selVcf").textContent = "—";
+    $("selJpg").textContent = "—";
+    return;
+  }
+  const {name, meta} = contactDisplay(c);
+  $("selectedMeta").textContent = `${name} (${c.slug})`;
+  $("selHtml").textContent = `${c.slug}.html`;
+  $("selVcf").textContent = `${c.slug}.vcf`;
+  $("selJpg").textContent = c.has_photo ? `${c.slug}.jpg` : "(no photo)";
+}
+
+function loadIntoBuilder(c){
+  // GitHub settings
+  $("owner").value = c.owner || $("owner").value;
+  $("repo").value = c.repo || $("repo").value;
+  $("branch").value = c.branch || $("branch").value;
+  $("path").value = c.path || "";
+
+  // identity
+  $("first").value = c.first || "";
+  $("last").value  = c.last || "";
+  $("fn").value    = c.fn || "";
+
+  $("org").value   = c.org || "";
+  $("title").value = c.title || "";
+
+  // phone
+  $("phone_cc").value = c.phone_cc || "";
+  $("phone_num").value = c.phone_num || "";
+
+  // whatsapp
+  $("wa_cc").value = c.wa_cc || "";
+  $("wa_num").value = c.wa_num || "";
+
+  // email split
+  $("email_user").value = c.email_user || "";
+  $("email_domain").value = c.email_domain || "";
+
+  // ig
+  $("ig_user").value = c.ig_user || "";
+
+  $("maps").value = c.maps || "";
+  $("note").value = c.note || "";
+
+  $("showAdvanced").checked = !!c.advanced;
+  $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
+
+  $("url").value = c.url || "";
+  $("tg_user").value = c.tg_user || "";
+  $("work_cc").value = c.work_cc || "";
+  $("work_num").value = c.work_num || "";
+  $("adr").value = c.adr_raw || "";
+  $("categories").value = c.categories || "";
+
+  // photo cannot be loaded into file input due to browser security.
+  $("photo").value = "";
+  $("photoInfo").textContent = c.has_photo ? "Photo was used previously (reselect file to upload/zip again)." : "No image selected.";
+
+  // tab switch back to builder
+  showTab("builder");
+
+  updatePreview();
+  debounceNameCheck();
+}
+
+/* =========================
+   ZIP download
+========================= */
+async function downloadZip(){
+  const d = collect();
+  const zip = new JSZip();
+
+  const vcf = buildVcf(d);
+  const html = buildHtml(d);
+
+  zip.file(`${d.slug}.vcf`, vcf);
+  zip.file(`${d.slug}.html`, html);
+
+  const imgFile = $("photo").files?.[0];
+  if(imgFile){
+    const buf = await imgFile.arrayBuffer();
+    zip.file(`${d.slug}.jpg`, buf);
+  }
+
+  const blob = await zip.generateAsync({type:"blob"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${d.slug}_cardx.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+/* =========================
+   GitHub upload
+========================= */
+async function readImageBase64(file){
+  const dataUrl = await new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = ()=>reject(new Error("Failed to read image"));
+    r.readAsDataURL(file);
+  });
+  const [, b64] = String(dataUrl).split(",");
+  return { base64: b64 };
+}
+
+async function putFile({owner, repo, branch, token, path, filename, contentBase64, message}){
+  const fullPath = filePathJoin(path, filename);
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+
+  // Need SHA if exists
+  let sha = null;
+  const getRes = await fetch(url, {
+    headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+  });
+  if(getRes.ok){
+    const j = await getRes.json();
+    sha = j.sha;
+  }
+
+  const body = { message, content: contentBase64, branch };
+  if(sha) body.sha = sha;
+
+  const putRes = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!putRes.ok){
+    const t = await putRes.text();
+    throw new Error(`Upload failed for ${filename}: ${putRes.status} ${t}`);
+  }
+  return await putRes.json();
+}
+
+let pendingUpload = null;
+
+function openUploadModal(){
+  const d = collect();
+  $("renameFirst").value = d.first || "";
+  $("renameLast").value = d.last || "";
+  $("uploadModal").style.display = "flex";
+}
+function closeUploadModal(){
+  $("uploadModal").style.display = "none";
+}
+
+async function doUpload(overwriteAllowed=true){
+  const token = $("token").value.trim();
+  if(!token) throw new Error("Paste your GitHub token first.");
+
+  const d = collect();
+  const slug = d.slug;
+
+  // Ensure exists decision already handled if needed
+  const vcf = buildVcf(d);
+  const html = buildHtml(d);
+
+  setStatus("Uploading .vcf…");
+  await putFile({
+    owner: d.owner, repo: d.repo, branch: d.branch, token,
+    path: d.path,
+    filename: `${slug}.vcf`,
+    contentBase64: base64FromText(vcf),
+    message: `CARDX: update ${slug}.vcf`
+  });
+
+  setStatus("Uploading .html…");
+  await putFile({
+    owner: d.owner, repo: d.repo, branch: d.branch, token,
+    path: d.path,
+    filename: `${slug}.html`,
+    contentBase64: base64FromText(html),
+    message: `CARDX: update ${slug}.html`
+  });
+
+  const imgFile = $("photo").files?.[0];
+  if(imgFile){
+    setStatus("Uploading image…");
+    const img = await readImageBase64(imgFile);
+    await putFile({
+      owner: d.owner, repo: d.repo, branch: d.branch, token,
+      path: d.path,
+      filename: `${slug}.jpg`,
+      contentBase64: img.base64,
+      message: `CARDX: update ${slug}.jpg`
+    });
+  }
+
+  const basePages = `https://${d.owner}.github.io/${d.repo}`;
+  const prefix = d.path ? `/${d.path}` : "";
+  setStatus(`Done. Open: ${basePages}${prefix}/${slug}.html`, "ok");
+}
+
+async function uploadWithDecision(){
+  try{
+    const token = $("token").value.trim();
+    if(!token) throw new Error("Paste your GitHub token first.");
+
+    const d = collect();
+
+    setStatus("Checking name status…");
+    const exists = await checkIfExists({
+      owner: d.owner, repo: d.repo, token,
+      path: d.path,
+      filename: `${d.slug}.html`
+    });
+
+    if(exists){
+      // open modal with rename/overwrite options
+      pendingUpload = { exists:true };
+      openUploadModal();
+      return;
+    }
+
+    // direct upload
+    await doUpload(true);
+    await updateNameStatus();
+  }catch(e){
+    setStatus(e.message, "err");
+  }
+}
+
+/* =========================
+   Tabs
+========================= */
+function showTab(which){
+  const isBuilder = which === "builder";
+  $("tabBuilder").classList.toggle("active", isBuilder);
+  $("tabManager").classList.toggle("active", !isBuilder);
+  $("builderPanel").style.display = isBuilder ? "grid" : "none";
+  $("managerPanel").style.display = isBuilder ? "none" : "grid";
+}
+
+/* =========================
+   Download single file buttons
+========================= */
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+  downloadBlob(filename, blob);
+}
+function downloadBlob(filename, blobOrFile){
+  const url = URL.createObjectURL(blobOrFile);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================
+   Debounce helpers
+========================= */
+function debounce(fn, ms=350){
+  let t=null;
+  return (...args)=>{
+    clearTimeout(t);
+    t=setTimeout(()=>fn(...args), ms);
+  };
+}
+const debounceNameCheck = debounce(updateNameStatus, 450);
+
+/* =========================
+   Init app
+========================= */
+let appInited = false;
+function initApp(){
+  if(appInited) return;
+  appInited = true;
+
+  // token auto-load
+  const savedToken = localStorage.getItem(LS.token);
+  if(savedToken) $("token").value = savedToken;
+
+  // tabs
+  $("tabBuilder").addEventListener("click", ()=>showTab("builder"));
+  $("tabManager").addEventListener("click", ()=>showTab("manager"));
+
+  // advanced toggle
+  $("showAdvanced").addEventListener("change", ()=>{
+    $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
+    updatePreview();
+  });
+
+  // photo
+  $("photo").addEventListener("change", ()=>{
+    const f = $("photo").files?.[0];
+    $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
+    updatePreview();
+  });
+
+  // email input guard: never allow '@' in username; auto-split if typed
+  $("email_user").addEventListener("input", ()=>{
+    if($("email_user").value.includes("@")){
+      buildEmail($("email_user").value, $("email_domain").value);
+    }
+  });
+
+  // inputs watch -> preview + name check
   const watchIds = [
     "owner","repo","branch","path","token",
     "first","last","fn","org","title",
@@ -710,157 +1607,216 @@
   watchIds.forEach(id=>{
     $(id).addEventListener("input", ()=>{
       updatePreview();
-      window.clearTimeout(window.__exDebounce);
-      window.__exDebounce = window.setTimeout(updateExistsBadge, 350);
+      debounceNameCheck();
     });
     $(id).addEventListener("change", ()=>{
       updatePreview();
-      window.clearTimeout(window.__exDebounce);
-      window.__exDebounce = window.setTimeout(updateExistsBadge, 350);
+      debounceNameCheck();
     });
   });
 
-  $("showAdvanced").addEventListener("change", ()=>{
-    $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
-    updatePreview();
-  });
-
-  $("photo").addEventListener("change", ()=>{
-    const f = $("photo").files?.[0];
-    $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
-    updatePreview();
-  });
-
+  // token buttons
   $("saveTokenBtn").addEventListener("click", ()=>{
     const tok = $("token").value.trim();
     if(!tok) return setStatus("No token to save.", "warn");
-    localStorage.setItem("cardx_github_token", tok);
-    setStatus("Token saved in localStorage.", "ok");
-    updateExistsBadge();
+    localStorage.setItem(LS.token, tok);
+    setStatus("Token saved locally.", "ok");
+    updateNameStatus();
   });
   $("loadTokenBtn").addEventListener("click", ()=>{
-    const tok = localStorage.getItem("cardx_github_token") || "";
+    const tok = localStorage.getItem(LS.token) || "";
     $("token").value = tok;
     setStatus(tok ? "Loaded saved token." : "No saved token found.", tok ? "ok" : "warn");
-    updateExistsBadge();
+    updateNameStatus();
   });
   $("clearTokenBtn").addEventListener("click", ()=>{
-    localStorage.removeItem("cardx_github_token");
+    localStorage.removeItem(LS.token);
     $("token").value = "";
     setStatus("Saved token cleared.", "ok");
-    updateExistsBadge();
+    updateNameStatus();
   });
 
-  $("downloadBtn").addEventListener("click", async ()=>{
+  // save contact
+  $("saveContactBtn").addEventListener("click", ()=>{
+    const d = collect();
+
+    // store split fields too (for editing later)
+    const contact = {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      owner: d.owner, repo: d.repo, branch: d.branch, path: d.path,
+      first: d.first, last: d.last, fn: d.fn,
+      org: d.org, title: d.title,
+      phone_cc: $("phone_cc").value, phone_num: $("phone_num").value,
+      wa_cc: $("wa_cc").value, wa_num: $("wa_num").value,
+      email_user: $("email_user").value.trim(), email_domain: $("email_domain").value.trim(),
+      ig_user: $("ig_user").value.trim().replace(/^@/,""),
+      maps: d.maps, note: d.note,
+      advanced: d.advanced,
+      url: $("url").value.trim(),
+      tg_user: $("tg_user").value.trim().replace(/^@/,""),
+      work_cc: $("work_cc").value, work_num: $("work_num").value,
+      adr_raw: $("adr").value.trim(),
+      categories: $("categories").value.trim(),
+      has_photo: d.has_photo,
+      slug: d.slug
+    };
+
+    upsertContact(contact);
+    setStatus("Saved to Contacts Manager.", "ok");
+  });
+
+  // ZIP download
+  $("downloadZipBtn").addEventListener("click", async ()=>{
     try{
-      const d = collect();
-      const vcf = buildVcf(d);
-      const html = buildHtml(d);
+      setStatus("Building ZIP…");
+      await downloadZip();
+      setStatus("ZIP downloaded.", "ok");
+    }catch(e){
+      setStatus(e.message || "ZIP failed", "err");
+    }
+  });
 
-      downloadText(`${d.slug}.vcf`, vcf);
-      downloadText(`${d.slug}.html`, html);
+  // upload with decision modal
+  $("uploadBtn").addEventListener("click", uploadWithDecision);
+  $("cancelUpload").addEventListener("click", ()=>{ closeUploadModal(); setStatus("Upload cancelled.", "warn"); });
 
-      const f = $("photo").files?.[0];
-      if(f) downloadBlob(`${d.slug}.jpg`, f);
-
-      setStatus(`Downloaded ${d.slug}.html + ${d.slug}.vcf` + (f ? ` + ${d.slug}.jpg` : ``), "ok");
+  $("overwriteUpload").addEventListener("click", async ()=>{
+    try{
+      closeUploadModal();
+      await doUpload(true);
+      await updateNameStatus();
     }catch(e){
       setStatus(e.message, "err");
     }
   });
 
-  $("uploadBtn").addEventListener("click", async ()=>{
+  $("renameUpload").addEventListener("click", async ()=>{
     try{
+      const nf = $("renameFirst").value.trim();
+      const nl = $("renameLast").value.trim();
+      if(!nf || !nl) throw new Error("Enter new first and last name for rename.");
+      // apply rename into form
+      $("first").value = nf;
+      $("last").value = nl;
+      closeUploadModal();
+      updatePreview();
+
+      // re-check existence after rename
       const token = $("token").value.trim();
-      if(!token) throw new Error("Paste your GitHub token first.");
-
       const d = collect();
-      const slug = d.slug;
-
-      setStatus("Checking if name already exists…");
       const exists = await checkIfExists({
         owner: d.owner, repo: d.repo, token,
         path: d.path,
-        filename: `${slug}.html`
+        filename: `${d.slug}.html`
       });
-
       if(exists){
-        const ok = confirm(
-          `⚠️ The name "${slug}" is already used.\n\n` +
-          `Files like ${slug}.html already exist.\n\n` +
-          `Overwrite?`
-        );
-        if(!ok){
-          setStatus("Upload cancelled. Choose a different name.", "warn");
-          return;
-        }
+        setStatus("Rename still conflicts. Choose another name.", "warn");
+        await updateNameStatus();
+        return;
       }
-
-      const vcf = buildVcf(d);
-      const html = buildHtml(d);
-
-      setStatus("Uploading .vcf…");
-      await putFile({
-        owner: d.owner, repo: d.repo, branch: d.branch, token,
-        path: d.path,
-        filename: `${slug}.vcf`,
-        contentBase64: base64FromText(vcf),
-        message: `CARDX: update ${slug}.vcf`
-      });
-
-      setStatus("Uploading .html…");
-      await putFile({
-        owner: d.owner, repo: d.repo, branch: d.branch, token,
-        path: d.path,
-        filename: `${slug}.html`,
-        contentBase64: base64FromText(html),
-        message: `CARDX: update ${slug}.html`
-      });
-
-      const imgFile = $("photo").files?.[0];
-      if(imgFile){
-        setStatus("Uploading image…");
-        const img = await readImageBase64(imgFile);
-        await putFile({
-          owner: d.owner, repo: d.repo, branch: d.branch, token,
-          path: d.path,
-          filename: `${slug}.jpg`,
-          contentBase64: img.base64,
-          message: `CARDX: update ${slug}.jpg`
-        });
-      }
-
-      const basePages = `https://${d.owner}.github.io/${d.repo}`;
-      const prefix = d.path ? `/${d.path}` : "";
-      setStatus(`Done. Open: ${basePages}${prefix}/${slug}.html`, "ok");
-      updatePreview();
-      updateExistsBadge();
+      await doUpload(true);
+      await updateNameStatus();
     }catch(e){
       setStatus(e.message, "err");
     }
   });
 
-  function downloadText(filename, text){
-    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
-    downloadBlob(filename, blob);
-  }
-  function downloadBlob(filename, blobOrFile){
-    const url = URL.createObjectURL(blobOrFile);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
+  // quick manager refresh
+  $("refreshManagerBtn").addEventListener("click", ()=>{ renderQuick(); setStatus("Manager refreshed.", "ok"); });
 
-  // init
+  // manager search
+  $("search").addEventListener("input", renderManager);
+
+  // load selected
+  $("loadSelectedBtn").addEventListener("click", ()=>{
+    if(!selectedId) return;
+    const c = loadContacts().find(x=>x.id===selectedId);
+    if(c) loadIntoBuilder(c);
+  });
+
+  // delete selected
+  $("deleteSelectedBtn").addEventListener("click", ()=>{
+    if(!selectedId) return;
+    const ok = confirm("Delete selected contact?");
+    if(!ok) return;
+    deleteContactById(selectedId);
+    selectedId = null;
+    renderSelectedMeta(null);
+    setStatus("Deleted.", "ok");
+  });
+
+  // export/import contacts
+  $("exportContactsBtn").addEventListener("click", ()=>{
+    const data = loadContacts();
+    downloadText("cardx_contacts.json", JSON.stringify(data, null, 2));
+  });
+  $("importContactsBtn").addEventListener("click", ()=>$("importFile").click());
+  $("importFile").addEventListener("change", async ()=>{
+    try{
+      const f = $("importFile").files?.[0];
+      if(!f) return;
+      const txt = await f.text();
+      const json = JSON.parse(txt);
+      if(!Array.isArray(json)) throw new Error("Invalid JSON (expected array).");
+      // basic sanitize
+      json.forEach(c=>{ if(!c.id) c.id = crypto.randomUUID(); });
+      saveContacts(json);
+      $("importFile").value = "";
+      renderManager();
+      renderQuick();
+      setStatus("Imported contacts.", "ok");
+    }catch(e){
+      setStatus(e.message, "err");
+    }
+  });
+
+  // file downloads (locally generated)
+  $("dlHtml").addEventListener("click", ()=>{
+    const d = collect();
+    downloadText(`${d.slug}.html`, buildHtml(d));
+  });
+  $("dlVcf").addEventListener("click", ()=>{
+    const d = collect();
+    downloadText(`${d.slug}.vcf`, buildVcf(d));
+  });
+  $("dlJpg").addEventListener("click", ()=>{
+    const f = $("photo").files?.[0];
+    const d = collect();
+    if(!f) return setStatus("No image selected.", "warn");
+    downloadBlob(`${d.slug}.jpg`, f);
+  });
+
+  // initial render
   updatePreview();
-  $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
-  const saved = localStorage.getItem("cardx_github_token");
-  if(saved) $("token").value = saved;
-  updateExistsBadge();
+  renderQuick();
+  renderManager();
+  updateNameStatus();
+}
+
+/* =========================
+   Login init hooks
+========================= */
+$("setPassBtn").addEventListener("click", setPassword);
+$("loginBtn").addEventListener("click", login);
+$("logoutBtn").addEventListener("click", logout);
+$("resetAllBtn").addEventListener("click", resetSuite);
+
+// Enter-to-login
+$("loginPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
+$("setPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") setPassword(); });
+
+// App start: if session exists, show app
+(function start(){
+  if(sessionStorage.getItem(LS.session)==="1"){
+    showApp();
+  }else{
+    $("loginView").style.display = "flex";
+    $("appView").style.display = "none";
+    const hasPass = !!localStorage.getItem(LS.passHash);
+    setLoginStatus(hasPass ? "Enter password to login." : "No password set yet. Create one above.", hasPass ? "" : "warn");
+  }
+})();
 </script>
 </body>
 </html>
