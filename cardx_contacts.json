@@ -95,10 +95,11 @@
     "work_num": "",
     "adr_raw": "",
     "categories": "",
-    "has_photo": false,
+    "has_photo": true,
     "slug": "mahmoud_chatila",
-    "manual_slug": "",
-    "_source": "manual_save"
+    "manual_slug": "mahmoud_chatila",
+    "_source": "scanned_vcf",
+    "_has_html": true
   },
   {
     "id": "ac6fdcd9-305a-462a-a248-cbb4e93a5dfc",
