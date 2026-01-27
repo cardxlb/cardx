@@ -106,6 +106,7 @@
     background:rgba(255,255,255,.06);
   }
   .small{font-size:12px;color:var(--muted2)}
+  .hidden{display:none !important}
 
   /* main layout */
   .topBar{
@@ -257,6 +258,10 @@
   <div id="loginView" class="loginWrap">
     <div class="loginCard">
       <h1 style="font-size:22px;margin:0 0 6px;">CARDX Builder Suite</h1>
+      <p class="sub" style="margin-bottom:10px;">
+        Local password gate (Option B). <span class="mono">Note:</span> this is a “speed bump”, not true server-side security.
+      </p>
+
       <div class="divider"></div>
 
       <label>Set / Change password</label>
@@ -691,7 +696,7 @@ function filePathJoin(path, filename){
 
 function escapeHtml(s){
   return String(s||"").replace(/[&<>"']/g, m=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    "&":"&amp;","<":"&lt;",">":"&gt;","":"&quot;","'":"&#39;"
   }[m]));
 }
 function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
@@ -706,6 +711,11 @@ async function sha256(str){
 }
 
 async function setPassword(){
+  const p = $("setPass").value; // no minimum length enforced
+  if(!p){
+    setLoginStatus("Enter a password (can be short).", "warn");
+    return;
+  }
   const h = await sha256(p);
   localStorage.setItem(LS.passHash, h);
   setLoginStatus("Password set for this device. Now login below.", "ok");
@@ -719,6 +729,14 @@ async function login(){
     return;
   }
   const p = $("loginPass").value;
+  if(!p){
+    setLoginStatus("Enter your password.", "warn");
+    return;
+  }
+  if(!p){
+    setLoginStatus("Enter your password.", "warn");
+    return;
+  }
   const h = await sha256(p);
   if(h !== hSaved){
     setLoginStatus("Wrong password.", "err");
