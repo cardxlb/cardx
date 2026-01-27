@@ -2,6 +2,8 @@ BEGIN:VCARD
 VERSION:3.0
 N:Chatila;Zaher;;;
 FN:Zaher Chatila
+ORG:Universal Equipment
+TITLE:CEO
 TEL;TYPE=CELL:+9613387380
 EMAIL;TYPE=INTERNET:zaherc@hotmail.com
 END:VCARD
