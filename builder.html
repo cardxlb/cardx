@@ -31,6 +31,15 @@
     .full{grid-column:1/-1}
     .previewBox{margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18)}
     a{color:#7fb0ff}
+    .divider{height:1px;background:rgba(255,255,255,.10);margin:16px 0}
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .small{font-size:12px;color:rgba(255,255,255,.68)}
+    .hidden{display:none}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06)
+    }
   </style>
 </head>
 <body>
@@ -86,25 +95,44 @@
           <input id="title" value="Chief Executive Officer" />
         </div>
 
+        <!-- PHONE split -->
         <div>
-          <label>Phone (E.164)</label>
-          <input id="tel" value="+96178929249" />
+          <label>Phone country code (digits)</label>
+          <input id="phone_cc" value="961" inputmode="numeric" placeholder="e.g. 961" />
         </div>
         <div>
-          <label>Email</label>
-          <input id="email" value="mahmoudchatila974@gmail.com" />
+          <label>Phone number (digits)</label>
+          <input id="phone_num" value="78929249" inputmode="numeric" placeholder="e.g. 78929249" />
+        </div>
+
+        <!-- WHATSAPP split -->
+        <div>
+          <label>WhatsApp country code (digits)</label>
+          <input id="wa_cc" value="961" inputmode="numeric" placeholder="e.g. 961" />
+        </div>
+        <div>
+          <label>WhatsApp number (digits)</label>
+          <input id="wa_num" value="78929249" inputmode="numeric" placeholder="e.g. 78929249" />
+        </div>
+
+        <!-- EMAIL split -->
+        <div>
+          <label>Email username</label>
+          <input id="email_user" value="mahmoudchatila974" placeholder="before @" />
+        </div>
+        <div>
+          <label>Email domain</label>
+          <input id="email_domain" value="gmail.com" placeholder="gmail.com" />
+        </div>
+
+        <!-- INSTAGRAM username only -->
+        <div>
+          <label>Instagram username</label>
+          <input id="ig_user" value="mahmoud__chatila" placeholder="username only" />
+          <div class="small">Builder will create: <span class="mono">https://instagram.com/username</span></div>
         </div>
 
         <div>
-          <label>WhatsApp number (digits only, country code)</label>
-          <input id="wa" value="96178929249" />
-        </div>
-        <div>
-          <label>Instagram URL</label>
-          <input id="ig" value="https://instagram.com/mahmoud__chatila" />
-        </div>
-
-        <div class="full">
           <label>Location URL (Google Maps link)</label>
           <input id="maps" value="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7" />
         </div>
@@ -118,6 +146,54 @@
           <label>Profile image (.jpg/.png)</label>
           <input id="photo" type="file" accept="image/*" />
           <div class="mono" id="photoInfo" style="margin-top:6px;">No image selected.</div>
+        </div>
+
+        <div class="full divider"></div>
+
+        <!-- Advanced toggle -->
+        <div class="full toggleRow">
+          <div>
+            <div class="pill">
+              <input id="showAdvanced" type="checkbox" />
+              <label for="showAdvanced" style="margin:0;cursor:pointer;">Show advanced fields</label>
+            </div>
+            <div class="small">Default stays simple. Advanced adds extra vCard + extra buttons.</div>
+          </div>
+          <div class="small mono" id="existsLine">—</div>
+        </div>
+
+        <!-- ADVANCED FIELDS (hidden by default) -->
+        <div id="advancedSection" class="full hidden">
+          <div class="grid" style="margin-top:12px">
+            <div>
+              <label>Website URL (optional)</label>
+              <input id="url" placeholder="https://example.com" />
+            </div>
+            <div>
+              <label>Telegram username (optional)</label>
+              <input id="tg_user" placeholder="username (no @)" />
+            </div>
+
+            <div>
+              <label>Second phone (Work) country code</label>
+              <input id="work_cc" inputmode="numeric" placeholder="e.g. 961" />
+            </div>
+            <div>
+              <label>Second phone (Work) number</label>
+              <input id="work_num" inputmode="numeric" placeholder="e.g. 70123456" />
+            </div>
+
+            <div class="full">
+              <label>Address (ADR) (optional)</label>
+              <input id="adr" placeholder="Street;City;Region;Postal;Country  (we'll format it)" />
+              <div class="small">Example: <span class="mono">Verdun;Beirut;;;Lebanon</span></div>
+            </div>
+
+            <div class="full">
+              <label>Categories (comma separated)</label>
+              <input id="categories" placeholder="Finance,Crypto,Business" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -152,6 +228,8 @@
     return [a,b].filter(Boolean).join("_") || "contact";
   }
 
+  function digitsOnly(s){ return String(s||"").replace(/\D/g,""); }
+
   function base64FromText(text){
     // UTF-8 safe base64
     return btoa(unescape(encodeURIComponent(text)));
@@ -162,9 +240,48 @@
     return path.replace(/\/+$/,"") + "/" + filename;
   }
 
+  function normalizeInstagram(user){
+    const u = String(user||"").trim().replace(/^@/,"");
+    return u ? `https://instagram.com/${u}` : "";
+  }
+
+  function buildEmail(user, domain){
+    const u = String(user||"").trim();
+    const d = String(domain||"").trim().replace(/^@/,"");
+    if(!u || !d) return "";
+    return `${u}@${d}`;
+  }
+
+  function buildE164(cc, num){
+    const c = digitsOnly(cc);
+    const n = digitsOnly(num);
+    if(!c || !n) return "";
+    return `+${c}${n}`;
+  }
+
+  function buildWaDigits(cc, num){
+    const c = digitsOnly(cc);
+    const n = digitsOnly(num);
+    if(!c || !n) return "";
+    return `${c}${n}`;
+  }
+
+  function buildAdrLine(adrRaw){
+    // Input example: "Verdun;Beirut;;;Lebanon" => ADR:;;Verdun;Beirut;;;Lebanon
+    const s = String(adrRaw||"").trim();
+    if(!s) return "";
+    // Allow user to input Street;City;Region;Postal;Country
+    const parts = s.split(";").map(x=>x.trim());
+    const street = parts[0] || "";
+    const city   = parts[1] || "";
+    const region = parts[2] || "";
+    const postal = parts[3] || "";
+    const country= parts[4] || "";
+    return `ADR;TYPE=WORK:;;${street};${city};${region};${postal};${country}`;
+  }
+
   function buildVcf(data){
-    // vCard 3.0 (safe core fields + optional NOTE)
-    // N is "Last;First;Additional;Prefix;Suffix"
+    // vCard 3.0 - core + optional advanced
     const lines = [
       "BEGIN:VCARD",
       "VERSION:3.0",
@@ -172,22 +289,53 @@
       `FN:${data.fn}`,
       data.org ? `ORG:${data.org}` : "",
       data.title ? `TITLE:${data.title}` : "",
-      data.tel ? `TEL;TYPE=CELL:${data.tel}` : "",
+      data.tel_e164 ? `TEL;TYPE=CELL:${data.tel_e164}` : "",
       data.email ? `EMAIL;TYPE=INTERNET:${data.email}` : "",
       data.note ? `NOTE:${data.note.replace(/\n/g,"\\n")}` : "",
-      "END:VCARD"
-    ].filter(Boolean);
-    return lines.join("\n");
+    ];
+
+    if(data.advanced){
+      if(data.url) lines.push(`URL:${data.url}`);
+      if(data.tg_user) lines.push(`X-SOCIALPROFILE;TYPE=telegram:https://t.me/${data.tg_user}`);
+      if(data.work_e164) lines.push(`TEL;TYPE=WORK:${data.work_e164}`);
+      const adrLine = buildAdrLine(data.adr_raw);
+      if(adrLine) lines.push(adrLine);
+      if(data.categories) lines.push(`CATEGORIES:${data.categories}`);
+    }
+
+    lines.push("END:VCARD");
+    return lines.filter(Boolean).join("\n");
   }
 
   function buildHtml(data){
     const owner = data.owner, repo = data.repo, branch = data.branch, path = data.path;
     const slug = data.slug;
-    const basePages = `https://${owner}.github.io/${repo}`;
-    const vcfUrl = `${basePages}/${path ? path.replace(/^\/+|\/+$/g,"") + "/" : ""}${slug}.vcf`;
-    const imgRaw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${path ? path.replace(/^\/+|\/+$/g,"") + "/" : ""}${slug}.jpg`;
 
-    // Your clean single-template page (no duplicated head/body)
+    const basePages = `https://${owner}.github.io/${repo}`;
+    const prefix = path ? path.replace(/^\/+|\/+$/g,"") + "/" : "";
+    const vcfUrl = `${basePages}/${prefix}${slug}.vcf`;
+    const imgRaw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${slug}.jpg`;
+
+    const igUrl = data.ig_url || "";
+    const waLink = data.wa_digits ? `https://wa.me/${data.wa_digits}` : "";
+    const telLink = data.tel_e164 ? `tel:${data.tel_e164}` : "";
+    const mailLink = data.email ? `mailto:${data.email}` : "";
+
+    const extraButtons = data.advanced ? `
+        ${data.url ? `
+        <a class="btn" href="${escapeAttr(data.url)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/globe2.svg" alt="">
+          <span>Website</span><span></span>
+        </a>` : ""}
+
+        ${data.tg_user ? `
+        <a class="btn" href="https://t.me/${escapeAttr(data.tg_user)}">
+          <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/send.svg" alt="">
+          <span>Telegram</span><span></span>
+        </a>` : ""}
+    ` : "";
+
+    // Single clean template
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -336,30 +484,37 @@
           <span>Save Contact</span><span></span>
         </a>
 
-        <a class="btn" href="tel:${escapeAttr(data.tel)}">
+        ${telLink ? `
+        <a class="btn" href="${escapeAttr(telLink)}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/telephone.svg" alt="">
           <span>Call</span><span></span>
-        </a>
+        </a>` : ""}
 
-        <a class="btn" href="https://wa.me/${escapeAttr(data.wa)}">
+        ${waLink ? `
+        <a class="btn" href="${escapeAttr(waLink)}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/whatsapp.svg" alt="">
           <span>WhatsApp</span><span></span>
-        </a>
+        </a>` : ""}
 
-        <a class="btn" href="mailto:${escapeAttr(data.email)}">
+        ${mailLink ? `
+        <a class="btn" href="${escapeAttr(mailLink)}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/envelope.svg" alt="">
           <span>Email</span><span></span>
-        </a>
+        </a>` : ""}
 
-        <a class="btn" href="${escapeAttr(data.ig)}">
+        ${igUrl ? `
+        <a class="btn" href="${escapeAttr(igUrl)}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/instagram.svg" alt="">
           <span>Instagram</span><span></span>
-        </a>
+        </a>` : ""}
 
+        ${data.maps ? `
         <a class="btn" href="${escapeAttr(data.maps)}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/geo-alt.svg" alt="">
           <span>Location</span><span></span>
-        </a>
+        </a>` : ""}
+
+        ${extraButtons}
       </div>
 
       <div class="footer">
@@ -388,19 +543,35 @@
     const last = $("last").value.trim();
     const slug = slugify(first,last);
 
+    const tel_e164 = buildE164($("phone_cc").value, $("phone_num").value);
+    const wa_digits = buildWaDigits($("wa_cc").value, $("wa_num").value);
+
+    const email = buildEmail($("email_user").value, $("email_domain").value);
+    const ig_url = normalizeInstagram($("ig_user").value);
+
+    const advanced = $("showAdvanced").checked;
+
+    const work_e164 = advanced ? buildE164($("work_cc").value, $("work_num").value) : "";
+    const url = advanced ? $("url").value.trim() : "";
+    const tg_user = advanced ? $("tg_user").value.trim().replace(/^@/,"") : "";
+    const adr_raw = advanced ? $("adr").value.trim() : "";
+    const categories = advanced ? $("categories").value.trim().replace(/\s*,\s*/g, ",") : "";
+
     return {
       owner, repo, branch, path,
-      first, last,
-      slug,
+      first, last, slug,
       fn: $("fn").value.trim(),
       org: $("org").value.trim(),
       title: $("title").value.trim(),
-      tel: $("tel").value.trim(),
-      email: $("email").value.trim(),
-      wa: $("wa").value.trim().replace(/\D/g,""),
-      ig: $("ig").value.trim(),
+      tel_e164,
+      wa_digits,
+      email,
+      ig_url,
       maps: $("maps").value.trim(),
-      note: $("note").value.trim()
+      note: $("note").value.trim(),
+      advanced,
+      // advanced extras
+      work_e164, url, tg_user, adr_raw, categories
     };
   }
 
@@ -417,23 +588,29 @@
   }
 
   async function readImageBase64(file){
-    // Return { base64, mime }
     const dataUrl = await new Promise((resolve,reject)=>{
       const r = new FileReader();
       r.onload = ()=>resolve(r.result);
       r.onerror = ()=>reject(new Error("Failed to read image"));
       r.readAsDataURL(file);
     });
-    const [meta, b64] = dataUrl.split(",");
-    const mime = (meta.match(/data:(.*?);base64/)||[])[1] || "image/jpeg";
-    return { base64: b64, mime };
+    const [, b64] = String(dataUrl).split(",");
+    return { base64: b64 };
+  }
+
+  async function checkIfExists({owner, repo, token, path, filename}){
+    const fullPath = filePathJoin(path, filename);
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+    const res = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
+    });
+    return res.ok;
   }
 
   async function putFile({owner, repo, branch, token, path, filename, contentBase64, message}){
     const fullPath = filePathJoin(path, filename);
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
 
-    // Need SHA if file exists
     let sha = null;
     const getRes = await fetch(url, {
       headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
@@ -443,11 +620,7 @@
       sha = j.sha;
     }
 
-    const body = {
-      message,
-      content: contentBase64,
-      branch
-    };
+    const body = { message, content: contentBase64, branch };
     if(sha) body.sha = sha;
 
     const putRes = await fetch(url, {
@@ -473,9 +646,52 @@
     el.textContent = msg;
   }
 
+  async function updateExistsBadge(){
+    try{
+      const token = $("token").value.trim();
+      const d = collect();
+      if(!token){
+        $("existsLine").textContent = "Exist check: (token required)";
+        return;
+      }
+      const exists = await checkIfExists({
+        owner: d.owner, repo: d.repo, token,
+        path: d.path,
+        filename: `${d.slug}.html`
+      });
+      $("existsLine").textContent = exists ? "Name status: EXISTS" : "Name status: AVAILABLE";
+      $("existsLine").className = "small mono " + (exists ? "warn" : "ok");
+    }catch{
+      $("existsLine").textContent = "Name status: (check failed)";
+      $("existsLine").className = "small mono warn";
+    }
+  }
+
   // events
-  ["owner","repo","branch","path","first","last","fn","org","title","tel","email","wa","ig","maps"].forEach(id=>{
-    $(id).addEventListener("input", updatePreview);
+  const watchIds = [
+    "owner","repo","branch","path","token",
+    "first","last","fn","org","title",
+    "phone_cc","phone_num","wa_cc","wa_num",
+    "email_user","email_domain","ig_user","maps","note",
+    "showAdvanced","url","tg_user","work_cc","work_num","adr","categories"
+  ];
+  watchIds.forEach(id=>{
+    $(id).addEventListener("input", ()=>{
+      updatePreview();
+      // light debounce
+      window.clearTimeout(window.__exDebounce);
+      window.__exDebounce = window.setTimeout(updateExistsBadge, 350);
+    });
+    $(id).addEventListener("change", ()=>{
+      updatePreview();
+      window.clearTimeout(window.__exDebounce);
+      window.__exDebounce = window.setTimeout(updateExistsBadge, 350);
+    });
+  });
+
+  $("showAdvanced").addEventListener("change", ()=>{
+    $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
+    updatePreview();
   });
 
   $("photo").addEventListener("change", ()=>{
@@ -488,16 +704,19 @@
     if(!tok) return setStatus("No token to save.", "warn");
     localStorage.setItem("cardx_github_token", tok);
     setStatus("Token saved in localStorage.", "ok");
+    updateExistsBadge();
   });
   $("loadTokenBtn").addEventListener("click", ()=>{
     const tok = localStorage.getItem("cardx_github_token") || "";
     $("token").value = tok;
     setStatus(tok ? "Loaded saved token." : "No saved token found.", tok ? "ok" : "warn");
+    updateExistsBadge();
   });
   $("clearTokenBtn").addEventListener("click", ()=>{
     localStorage.removeItem("cardx_github_token");
     $("token").value = "";
     setStatus("Saved token cleared.", "ok");
+    updateExistsBadge();
   });
 
   $("downloadBtn").addEventListener("click", async ()=>{
@@ -525,6 +744,26 @@
 
       const d = collect();
       const slug = d.slug;
+
+      // Existence check
+      setStatus("Checking if name already exists…");
+      const exists = await checkIfExists({
+        owner: d.owner, repo: d.repo, token,
+        path: d.path,
+        filename: `${slug}.html`
+      });
+
+      if(exists){
+        const ok = confirm(
+          `⚠️ The name "${slug}" is already used.\n\n` +
+          `Files like ${slug}.html already exist.\n\n` +
+          `Overwrite?`
+        );
+        if(!ok){
+          setStatus("Upload cancelled. Choose a different name.", "warn");
+          return;
+        }
+      }
 
       const vcf = buildVcf(d);
       const html = buildHtml(d);
@@ -566,6 +805,7 @@
       const prefix = d.path ? `/${d.path}` : "";
       setStatus(`Done. Open: ${basePages}${prefix}/${slug}.html`, "ok");
       updatePreview();
+      updateExistsBadge();
     }catch(e){
       setStatus(e.message, "err");
     }
@@ -588,9 +828,10 @@
 
   // init
   updatePreview();
-  // auto-load token if present
+  $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
   const saved = localStorage.getItem("cardx_github_token");
   if(saved) $("token").value = saved;
+  updateExistsBadge();
 </script>
 </body>
 </html>
