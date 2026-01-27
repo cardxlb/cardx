@@ -619,6 +619,15 @@
    Utilities
 ========================= */
 const $ = (id)=>document.getElementById(id);
+function on(id, evt, fn){ const el = $(id); if(el) el.addEventListener(evt, fn); }
+function showFatal(err){
+  const msg = (err && (err.stack||err.message)) ? (err.stack||err.message) : String(err);
+  const box = $("loginStatus") || $("status");
+  if(box){ box.className="mono err"; box.textContent = "JS error: " + msg; }
+  console.error(err);
+}
+window.addEventListener("error", (e)=>{ try{ showFatal(e.error||e.message); }catch{} });
+window.addEventListener("unhandledrejection", (e)=>{ try{ showFatal(e.reason); }catch{} });
 const LS = {
   passHash: "cardx_suite_passhash",
   session: "cardx_suite_session",
@@ -1988,17 +1997,18 @@ let appInited = false;
 async function initApp(){
   if(appInited) return;
   appInited = true;
+  try{
 
   // token auto-load
   const savedToken = localStorage.getItem(LS.token);
   if(savedToken) $("token").value = savedToken;
 
   // tabs
-  $("tabBuilder").addEventListener("click", ()=>showTab("builder"));
-  $("tabManager").addEventListener("click", ()=>showTab("manager"));
+  on("tabBuilder","click", ()=>showTab("builder"));
+  on("tabManager","click", ()=>showTab("manager"));
 
   // advanced toggle
-  $("showAdvanced").addEventListener("change", ()=>{
+  on("showAdvanced","change", ()=>{
     $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
     updatePreview();
   });
@@ -2228,19 +2238,20 @@ async function initApp(){
   await renderQuick();
   await renderManager();
   updateNameStatus();
+  }catch(e){ showFatal(e); }
 }
 
 /* =========================
    Login init hooks
 ========================= */
-$("setPassBtn").addEventListener("click", setPassword);
-$("loginBtn").addEventListener("click", login);
-$("logoutBtn").addEventListener("click", logout);
-$("resetAllBtn").addEventListener("click", resetSuite);
+on("setPassBtn","click", setPassword);
+on("loginBtn","click", login);
+on("logoutBtn","click", logout);
+on("resetAllBtn","click", resetSuite);
 
 // Enter-to-login
-$("loginPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
-$("setPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") setPassword(); });
+on("loginPass","keydown", (e)=>{ if(e.key==="Enter") login(); });
+on("setPass","keydown", (e)=>{ if(e.key==="Enter") setPassword(); });
 
 // App start: if session exists, show app
 (function start(){
