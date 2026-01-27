@@ -1,7 +1,7 @@
 [
   {
     "id": "6b0be81f-da96-4e14-8727-c4bb561e3b27",
-    "created_at": "2026-01-27T11:17:18.303Z",
+    "created_at": "2026-01-27T11:35:35.849Z",
     "owner": "cardxlb",
     "repo": "cardx",
     "branch": "main",
@@ -9,7 +9,7 @@
     "first": "Ali",
     "last": "Dakik",
     "fn": "Ali Dakik",
-    "org": "CardX Holding S.A.L",
+    "org": "2yoora mtabale",
     "title": "",
     "phone_cc": "961",
     "phone_num": "81744665",
@@ -27,7 +27,7 @@
     "work_num": "",
     "adr_raw": "",
     "categories": "",
-    "has_photo": true,
+    "has_photo": false,
     "slug": "ali_dakik",
     "manual_slug": "",
     "_has_html": true,
