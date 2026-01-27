@@ -129,10 +129,10 @@
     "work_num": "",
     "adr_raw": "",
     "categories": "",
-    "has_photo": false,
+    "has_photo": true,
     "slug": "zaher_chatila",
-    "manual_slug": "",
+    "manual_slug": "zaher_chatila",
     "_has_html": true,
-    "_source": "uploaded"
+    "_source": "scanned_vcf"
   }
 ]
