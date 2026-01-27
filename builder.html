@@ -254,8 +254,37 @@
 <body>
   <div class="bg"></div>
 
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="loginWrap">
+    <div class="loginCard">
+      <h1 style="font-size:22px;margin:0 0 6px;">CARDX Builder Suite</h1>
+      <p class="sub" style="margin-bottom:10px;">
+        Local password gate (Option B). <span class="mono">Note:</span> this is a “speed bump”, not true server-side security.
+      </p>
+
+      <div class="divider"></div>
+
+      <label>Set / Change password</label>
+      <input id="setPass" type="password" placeholder="Create a password for this device" />
+      <div class="row">
+        <button class="primary" id="setPassBtn">Set Password</button>
+        <button class="danger" id="resetAllBtn">Reset Suite (clears saved data)</button>
+      </div>
+      <div class="mono help">Password is stored as a hash in <span class="kbd">localStorage</span>. No server.</div>
+
+      <div class="divider"></div>
+
+      <label>Login</label>
+      <input id="loginPass" type="password" placeholder="Enter password" />
+      <div class="row">
+        <button class="primary" id="loginBtn">Login</button>
+      </div>
+      <div id="loginStatus" class="mono" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
   <!-- APP VIEW -->
-<div id="appView" class="wrap" >
+  <div id="appView" class="wrap" style="display:none;">
     <div class="topBar">
       <div>
         <h1>CARDX Builder Suite</h1>
@@ -266,7 +295,8 @@
           <span id="nameDot" class="dot"></span>
           <span id="nameText">Name status: —</span>
         </div>
-        </div>
+        <button id="logoutBtn" class="danger">Logout</button>
+      </div>
     </div>
 
     <div class="tabs">
@@ -293,10 +323,6 @@
           <div>
             <label>Folder path (blank = root)</label>
             <input id="path" placeholder="" />
-          </div>
-          <div>
-            <label>Contacts file (JSON)</label>
-            <input id="contactsFile" value="contacts.json" />
           </div>
         </div>
 
@@ -440,14 +466,13 @@
               <label>Categories (comma separated) (optional)</label>
               <input id="categories" placeholder="Finance,Crypto,Business" />
             </div>
-          
 
             <div class="full">
               <label>Manual filename (slug) override (optional)</label>
               <input id="manual_slug" placeholder="e.g. mahmoud_chatila" />
               <div class="small help">If set, filenames become <span class="kbd">manual_slug.html</span>, <span class="kbd">manual_slug.vcf</span>, <span class="kbd">manual_slug.jpg</span> (if photo).</div>
             </div>
-</div>
+          </div>
         </div>
 
         <div class="previewBox">
@@ -516,8 +541,7 @@
             <div class="count"><span id="managerCount">0</span> persons</div>
           </div>
           <div class="row" style="margin-top:0;">
-            <button id="reloadOnlineBtn" class="mini primary">Reload Online</button>
-            <button id="discoverBtn" class="mini">Discover existing cards</button>
+            <button id="discoverContactsBtn" class="mini primary">Discover (Repo)</button>
             <button id="exportContactsBtn" class="mini">Export JSON</button>
             <button id="importContactsBtn" class="mini">Import JSON</button>
             <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -593,12 +617,11 @@ const LS = {
   passHash: "cardx_suite_passhash",
   session: "cardx_suite_session",
   token: "cardx_github_token",
-  contacts: "cardx_contacts_v1",
 };
 
 // UUID helper (Safari/iOS compatibility)
 function uuidv4(){
-  if(window.crypto && crypto.randomUUID) return uuidv4();
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
   // RFC4122-ish fallback
   const rnd = (n)=>Math.floor(Math.random()*n);
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c=>{
@@ -607,7 +630,6 @@ function uuidv4(){
     return v.toString(16);
   });
 }
-
 
 function setStatus(msg, cls=""){
   const el = $("status");
@@ -648,21 +670,17 @@ function buildEmail(user, domain){
   let d = String(domain||"").trim().replace(/^@/,"");
   if(!u || !d) return "";
 
-  // Prevent user from putting "@gmail.com" in the username field:
-  // if they typed an email in the username field, split it.
   if(u.includes("@")){
     const parts = u.split("@");
     const left = parts[0] || "";
     const right = parts[1] || "";
     if(left){
-      // move domain to domain field if empty or different
       if(right) d = right;
       $("email_user").value = left;
       $("email_domain").value = d;
       return `${left}@${d}`;
     }
   }
-  // Also if they typed gmail.com in user field, move it away
   if(u.toLowerCase().endsWith("gmail.com")){
     const fixed = u.replace(/@?gmail\.com$/i,"").replace(/@$/,"");
     if(fixed){
@@ -700,7 +718,7 @@ function filePathJoin(path, filename){
 
 function escapeHtml(s){
   return String(s||"").replace(/[&<>"']/g, m=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;","":"&quot;","'":"&#39;"
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[m]));
 }
 function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
@@ -715,7 +733,7 @@ async function sha256(str){
 }
 
 async function setPassword(){
-  const p = $("setPass").value; // no minimum length enforced
+  const p = $("setPass").value;
   if(!p){
     setLoginStatus("Enter a password (can be short).", "warn");
     return;
@@ -733,10 +751,6 @@ async function login(){
     return;
   }
   const p = $("loginPass").value;
-  if(!p){
-    setLoginStatus("Enter your password.", "warn");
-    return;
-  }
   if(!p){
     setLoginStatus("Enter your password.", "warn");
     return;
@@ -759,10 +773,9 @@ function logout(){
 }
 
 function resetSuite(){
-  const ok = confirm("This clears saved contacts + token + password hash from this browser. Continue?");
+  const ok = confirm("This clears saved token + password hash from this browser. Continue?");
   if(!ok) return;
   localStorage.removeItem(LS.passHash);
-  localStorage.removeItem(LS.contacts);
   localStorage.removeItem(LS.token);
   sessionStorage.removeItem(LS.session);
   $("setPass").value = "";
@@ -1051,7 +1064,6 @@ function collect(){
   const fallbackFN = [first,last].filter(Boolean).join(" ").trim();
   const fn = $("fn").value.trim() || fallbackFN || slug;
 
-  // sanitize email: avoid @ in username
   const email = buildEmail($("email_user").value, $("email_domain").value);
 
   const tel_e164  = buildE164($("phone_cc").value, $("phone_num").value);
@@ -1100,7 +1112,6 @@ function updatePreview(){
     `<a href="${basePages}${prefix}/${d.slug}.html" target="_blank">${basePages}${prefix}/${d.slug}.html</a><br>` +
     `<a href="${basePages}${prefix}/${d.slug}.vcf" target="_blank">${basePages}${prefix}/${d.slug}.vcf</a>`;
 
-  // right file panel labels (local)
   $("filesSlug").textContent = d.slug;
   $("fileHtml").textContent = `${d.slug}.html`;
   $("fileVcf").textContent = `${d.slug}.vcf`;
@@ -1147,167 +1158,422 @@ async function updateNameStatus(){
   }
 }
 
-
 /* =========================
-   Online Contacts Manager (GitHub-backed)
-   - Stores contacts in a JSON file inside your repo (default: contacts.json)
-   - Reads: via raw.githubusercontent.com (public) OR GitHub API (if private with token)
-   - Writes: via GitHub API (requires token with Contents: Read/Write)
-   - Local download is still available via Export JSON
+   GitHub-backed Contacts (index file)
 ========================= */
-let contactsCache = [];
-let contactsLoadedOnce = false;
+const CONTACTS_FILENAME_DEFAULT = "cardx_contacts.json";
+let CONTACTS = [];
+let CONTACTS_LOADED = false;
+let selectedId = null;
 
-function getContactsSpec(){
-  const owner = $("owner").value.trim();
-  const repo  = $("repo").value.trim();
-  const branch= $("branch").value.trim() || "main";
-  const path  = $("path").value.trim().replace(/^\/+|\/+$/g,"");
-  const file  = ($("contactsFile") ? $("contactsFile").value.trim() : "contacts.json") || "contacts.json";
-  return { owner, repo, branch, path, file };
+function contactsFilename(){ return CONTACTS_FILENAME_DEFAULT; }
+
+function decodeBase64Utf8(b64){
+  const bin = atob(String(b64||"").replace(/\s/g,""));
+  return decodeURIComponent(Array.from(bin, c => "%" + c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
 }
 
-function contactsRawUrl(){
-  const {owner, repo, branch, path, file} = getContactsSpec();
-  const prefix = path ? `${path}/` : "";
-  // raw works for public repos; for private repos we'll fall back to API
-  return `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${file}`;
-}
-
-async function loadContactsOnline(){
-  const spec = getContactsSpec();
-  const token = $("token").value.trim();
-  const prefix = spec.path ? `${spec.path}/` : "";
-  // Try raw first (public)
-  try{
-    const res = await fetch(contactsRawUrl(), { cache: "no-store" });
-    if(res.ok){
-      const txt = await res.text();
-      const json = txt.trim() ? JSON.parse(txt) : [];
-      if(!Array.isArray(json)) throw new Error("contacts.json must be an array");
-      contactsCache = json;
-      contactsLoadedOnce = true;
-      return contactsCache;
+async function getRepoJsonFile({owner, repo, token, path, filename}){
+  const fullPath = filePathJoin(path, filename);
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+  const res = await fetch(url, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json"
     }
-  }catch(_e){
-    // ignore and try API
-  }
-  // Fallback: GitHub API (needs token for private)
-  if(!token){
-    // If no token and raw failed, we can't read. Keep cache empty.
-    contactsCache = [];
-    contactsLoadedOnce = true;
-    return contactsCache;
-  }
-  const fullPath = filePathJoin(spec.path, spec.file);
-  const url = `https://api.github.com/repos/${spec.owner}/${spec.repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}?ref=${encodeURIComponent(spec.branch)}`;
-  const apiRes = await fetch(url, {
-    headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
   });
-  if(apiRes.status === 404){
-    contactsCache = [];
-    contactsLoadedOnce = true;
-    return contactsCache;
+
+  if(res.status === 404){
+    return { exists:false, json:null };
   }
-  if(!apiRes.ok){
-    const t = await apiRes.text();
-    throw new Error(`Failed to load contacts.json: ${apiRes.status} ${t}`);
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`Failed to read ${filename}: ${res.status} ${t}`);
   }
-  const j = await apiRes.json();
-  const content = j.content ? atob(j.content.replace(/\n/g,"")) : "";
-  const json = content.trim() ? JSON.parse(content) : [];
-  if(!Array.isArray(json)) throw new Error("contacts.json must be an array");
-  contactsCache = json;
-  contactsLoadedOnce = true;
-  return contactsCache;
-}
 
-async function saveContactsOnline(list){
-  const token = $("token").value.trim();
-  if(!token) throw new Error("Token required to save contacts online.");
-  const spec = getContactsSpec();
-  const payload = JSON.stringify(list, null, 2);
-  await putFile({
-    owner: spec.owner, repo: spec.repo, branch: spec.branch, token,
-    path: spec.path,
-    filename: spec.file,
-    contentBase64: base64FromText(payload),
-    message: `CARDX: update ${spec.file}`
-  });
-  contactsCache = list;
-  contactsLoadedOnce = true;
-  return true;
-}
+  const j = await res.json();
+  if(!j || !j.content) throw new Error(`Invalid GitHub response for ${filename}.`);
+  const text = decodeBase64Utf8(j.content);
+  const parsed = JSON.parse(text);
 
-function ensureIds(list){
-  return list.map(c=>{
-    if(!c.id) c.id = uuidv4();
-    return c;
-  });
+  return { exists:true, json: parsed };
 }
-
-async function getContacts(){
-  if(!contactsLoadedOnce){
-    await loadContactsOnline();
-  }
-  return contactsCache;
-}
-
-async function upsertContactOnline(contact){
-  const list = ensureIds(await getContacts());
-  const id = contact.id || uuidv4();
-  contact.id = id;
-  const idx = list.findIndex(x=>x.id === id);
-  if(idx >= 0) list[idx] = contact;
-  else list.unshift(contact);
-  await saveContactsOnline(list);
-}
-
-async function deleteContactOnline(id){
-  const list = ensureIds(await getContacts()).filter(x=>x.id !== id);
-  await saveContactsOnline(list);
-}
-
 
 /* =========================
-   Contacts Manager (local)
+   GitHub scan + VCF parser
+========================= */
+async function listRepoDir({owner, repo, token, path}){
+  const apiPath = path ? encodeURIComponent(path).replace(/%2F/g,"/") : "";
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${apiPath}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json"
+    }
+  });
+
+  if(res.status === 404) return [];
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`Failed to list repo folder "${path || "/"}": ${res.status} ${t}`);
+  }
+
+  const j = await res.json();
+  return Array.isArray(j) ? j : [];
+}
+
+async function readRepoTextFile({owner, repo, token, path, filename}){
+  const fullPath = filePathJoin(path, filename);
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json"
+    }
+  });
+
+  if(res.status === 404) return null;
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`Failed to read ${filename}: ${res.status} ${t}`);
+  }
+
+  const j = await res.json();
+  if(!j || !j.content) return null;
+  return decodeBase64Utf8(j.content);
+}
+
+function parseVcf(vcfText){
+  const out = {
+    first: "", last: "", fn: "",
+    org: "", title: "",
+    tel_e164: "", email: "",
+    note: "", url: "",
+    tg_user: "", adr_raw: "", categories: ""
+  };
+  if(!vcfText) return out;
+
+  const unfolded = String(vcfText).replace(/\r\n/g,"\n").replace(/\n[ \t]/g,"");
+  const lines = unfolded.split("\n").map(l=>l.trim()).filter(Boolean);
+
+  for(const line of lines){
+    const [left, ...rest] = line.split(":");
+    const value = rest.join(":");
+    const key = left.toUpperCase();
+
+    if(key === "FN"){
+      out.fn = value || out.fn;
+    }else if(key.startsWith("N")){
+      const parts = (value || "").split(";");
+      out.last = (parts[0] || "").trim();
+      out.first = (parts[1] || "").trim();
+    }else if(key.startsWith("ORG")){
+      out.org = value ? value.split(";")[0].trim() : out.org;
+    }else if(key.startsWith("TITLE")){
+      out.title = value.trim();
+    }else if(key.startsWith("TEL")){
+      if(!out.tel_e164) out.tel_e164 = value.trim();
+    }else if(key.startsWith("EMAIL")){
+      if(!out.email) out.email = value.trim();
+    }else if(key.startsWith("NOTE")){
+      out.note = value.replace(/\\n/g,"\n");
+    }else if(key.startsWith("URL")){
+      out.url = value.trim();
+    }else if(key.startsWith("X-SOCIALPROFILE") && value.includes("t.me/")){
+      const m = value.match(/t\.me\/([^/\s]+)/i);
+      if(m) out.tg_user = m[1];
+    }else if(key.startsWith("ADR")){
+      const p = (value || "").split(";");
+      const street = p[2] || "";
+      const city = p[3] || "";
+      const region = p[4] || "";
+      const postal = p[5] || "";
+      const country = p[6] || "";
+      out.adr_raw = [street, city, region, postal, country].map(x=>String(x||"").trim()).join(";");
+    }else if(key.startsWith("CATEGORIES")){
+      out.categories = value.trim();
+    }
+  }
+
+  if(!out.fn){
+    const fallback = [out.first, out.last].filter(Boolean).join(" ").trim();
+    out.fn = fallback || "";
+  }
+  return out;
+}
+
+function splitE164(e164){
+  const s = String(e164||"").trim();
+  if(!s.startsWith("+")) return {cc:"", num:""};
+  const digits = s.replace(/\D/g,"");
+  if(digits.length < 7) return {cc:"", num:""};
+
+  const cc3 = digits.slice(0,3);
+  const rest3 = digits.slice(3);
+  if(cc3 === "961" && rest3.length >= 7) return {cc:"961", num:rest3};
+
+  const cc2 = digits.slice(0,2), rest2 = digits.slice(2);
+  const cc1 = digits.slice(0,1), rest1 = digits.slice(1);
+
+  const candidates = [
+    {cc:cc3, num:rest3},
+    {cc:cc2, num:rest2},
+    {cc:cc1, num:rest1},
+  ].filter(x=>x.num.length >= 7 && x.num.length <= 12);
+
+  return candidates[0] || {cc:"", num:""};
+}
+
+/* =========================
+   Auto-sync contacts.json
+========================= */
+let AUTO_SYNC_TIMER = null;
+
+function scheduleAutoSync(reason=""){
+  clearTimeout(AUTO_SYNC_TIMER);
+  AUTO_SYNC_TIMER = setTimeout(async ()=>{
+    try{
+      const token = $("token")?.value?.trim();
+      if(!token) return;
+      if(!Array.isArray(CONTACTS)) CONTACTS = [];
+      CONTACTS_LOADED = true;
+      await syncContactsToGitHub();
+    }catch(e){
+      setStatus(`Auto-sync failed: ${e.message}`, "err");
+    }
+  }, 900);
+}
+
+async function saveRepoJsonFile({owner, repo, branch, token, path, filename, json}){
+  const text = JSON.stringify(json, null, 2);
+  await putFile({
+    owner, repo, branch, token,
+    path,
+    filename,
+    contentBase64: base64FromText(text),
+    message: `CARDX: sync contacts (${filename})`
+  });
+}
+
+async function syncContactsToGitHub(){
+  const token = $("token").value.trim();
+  if(!token) throw new Error("Paste your GitHub token first (needed to sync contacts).");
+
+  const d = collect();
+  const filename = contactsFilename();
+  if(!Array.isArray(CONTACTS)) CONTACTS = [];
+
+  setStatus(`Syncing ${CONTACTS.length} contacts to GitHub (${filename})…`);
+  await saveRepoJsonFile({
+    owner: d.owner, repo: d.repo, branch: d.branch, token,
+    path: d.path,
+    filename,
+    json: CONTACTS
+  });
+  setStatus(`Synced contacts to GitHub: ${filePathJoin(d.path, filename)}`, "ok");
+}
+
+async function discoverContactsFromGitHub(){
+  const token = $("token").value.trim();
+  if(!token) throw new Error("Paste your GitHub token first (needed to discover contacts).");
+
+  const d = collect();
+  const filename = contactsFilename();
+
+  setStatus(`Discovering contacts… (JSON first, then scan files)…`);
+
+  // JSON fast path
+  try{
+    const { exists, json } = await getRepoJsonFile({
+      owner: d.owner, repo: d.repo, token,
+      path: d.path,
+      filename
+    });
+    if(exists && Array.isArray(json)){
+      json.forEach(c => { if(!c.id) c.id = uuidv4(); });
+      CONTACTS = json;
+      CONTACTS_LOADED = true;
+      selectedId = null;
+      renderManager();
+      renderQuick();
+      setStatus(`Loaded ${CONTACTS.length} contacts from ${filename}. Scanning repo for new files…`, "ok");
+    }
+  }catch{
+    // ignore
+  }
+
+  const items = await listRepoDir({ owner:d.owner, repo:d.repo, token, path:d.path });
+  const files = items.filter(x=>x && x.type === "file" && x.name);
+  const names = files.map(x=>String(x.name).trim()).filter(Boolean);
+
+  const slugs = new Set();
+  const vcfSet = new Set();
+  const htmlSet = new Set();
+  const jpgSet = new Set();
+
+  for(const name of names){
+    const lower = name.toLowerCase();
+    if(lower.endsWith(".vcf")){
+      const slug = name.replace(/\.vcf$/i,"");
+      slugs.add(slug); vcfSet.add(slug.toLowerCase());
+    }else if(lower.endsWith(".html")){
+      const slug = name.replace(/\.html$/i,"");
+      slugs.add(slug); htmlSet.add(slug.toLowerCase());
+    }else if(lower.endsWith(".jpg")){
+      const slug = name.replace(/\.jpg$/i,"");
+      slugs.add(slug); jpgSet.add(slug.toLowerCase());
+    }
+  }
+
+  if(slugs.size === 0){
+    CONTACTS = [];
+    CONTACTS_LOADED = true;
+    selectedId = null;
+    renderManager();
+    renderQuick();
+    setStatus(`No .vcf/.html/.jpg files found in "${d.path || "/"}". Auto-creating empty ${filename}…`, "warn");
+    scheduleAutoSync("discover-empty");
+    return;
+  }
+
+  setStatus(`Scan found ${slugs.size} unique slugs. Importing details (VCF where available)…`);
+
+  const existing = new Map((Array.isArray(CONTACTS) ? CONTACTS : []).map(c=>[String(c.slug||"").toLowerCase(), c]));
+  const result = [];
+
+  function minimalContactFromSlug(slug){
+    return {
+      id: uuidv4(),
+      created_at: new Date().toISOString(),
+      owner: d.owner, repo: d.repo, branch: d.branch, path: d.path,
+      first: "", last: "", fn: slug,
+      org: "", title: "",
+      phone_cc: "", phone_num: "",
+      wa_cc: "", wa_num: "",
+      email_user: "", email_domain: "",
+      ig_user: "", maps: "", note: "",
+      advanced: false,
+      url: "", tg_user: "", work_cc: "", work_num: "",
+      adr_raw: "", categories: "",
+      has_photo: jpgSet.has(slug.toLowerCase()),
+      slug, manual_slug: slug,
+      _has_html: htmlSet.has(slug.toLowerCase()),
+      _source: "scanned_files"
+    };
+  }
+
+  const slugList = Array.from(slugs.values());
+  for(let i=0;i<slugList.length;i++){
+    const slug = slugList[i];
+    const key = slug.toLowerCase();
+
+    let c = existing.get(key) ? {...existing.get(key)} : minimalContactFromSlug(slug);
+
+    c.owner = d.owner; c.repo = d.repo; c.branch = d.branch; c.path = d.path;
+    c.slug = slug;
+    c.manual_slug = c.manual_slug || slug;
+    c._has_html = htmlSet.has(key);
+    c.has_photo = jpgSet.has(key);
+
+    if(vcfSet.has(key)){
+      const vcfText = await readRepoTextFile({ owner:d.owner, repo:d.repo, token, path:d.path, filename:`${slug}.vcf` });
+      const p = parseVcf(vcfText);
+
+      let email_user = c.email_user || "";
+      let email_domain = c.email_domain || "";
+      if(p.email && p.email.includes("@")){
+        const parts = p.email.split("@");
+        email_user = parts[0] || "";
+        email_domain = parts[1] || "";
+      }
+
+      const telSplit = splitE164(p.tel_e164);
+
+      c.first = p.first || c.first || "";
+      c.last  = p.last  || c.last  || "";
+      c.fn    = p.fn    || c.fn    || slug;
+
+      c.org   = p.org   || c.org   || "";
+      c.title = p.title || c.title || "";
+
+      c.phone_cc = telSplit.cc || c.phone_cc || "";
+      c.phone_num = telSplit.num || c.phone_num || "";
+
+      if(!c.wa_cc && telSplit.cc) c.wa_cc = telSplit.cc;
+      if(!c.wa_num && telSplit.num) c.wa_num = telSplit.num;
+
+      c.email_user = email_user;
+      c.email_domain = email_domain;
+
+      c.note = (p.note ?? c.note ?? "");
+      c.url = (p.url ?? c.url ?? "");
+      c.tg_user = (p.tg_user ?? c.tg_user ?? "");
+      c.adr_raw = (p.adr_raw ?? c.adr_raw ?? "");
+      c.categories = (p.categories ?? c.categories ?? "");
+      c.advanced = !!(c.url || c.tg_user || c.adr_raw || c.categories);
+
+      c._source = "scanned_vcf";
+    }
+
+    if(!c.fn){
+      c.fn = [c.first, c.last].filter(Boolean).join(" ").trim() || slug;
+    }
+    if(!c.id) c.id = uuidv4();
+
+    result.push(c);
+    setStatus(`Imported ${i+1}/${slugList.length}…`);
+  }
+
+  const bySlug = new Map();
+  for(const c of result) bySlug.set(String(c.slug||"").toLowerCase(), c);
+
+  CONTACTS = Array.from(bySlug.values());
+  CONTACTS_LOADED = true;
+  selectedId = null;
+
+  renderManager();
+  renderQuick();
+
+  setStatus(`Discover complete: ${CONTACTS.length} contacts loaded. Auto-syncing ${filename}…`, "ok");
+  scheduleAutoSync("discover");
+}
+
+/* =========================
+   Contacts Manager (GitHub-backed, in-memory)
 ========================= */
 function loadContacts(){
-  try{
-    const raw = localStorage.getItem(LS.contacts);
-    return raw ? JSON.parse(raw) : [];
-  }catch{
-    return [];
-  }
+  return Array.isArray(CONTACTS) ? CONTACTS : [];
 }
 function saveContacts(list){
-  localStorage.setItem(LS.contacts, JSON.stringify(list));
+  CONTACTS = Array.isArray(list) ? list : [];
 }
 
-
-// Override local contacts with ONLINE (GitHub-backed) contacts
-async function loadContacts(){ return await getContacts(); }
-async function saveContacts(list){ await saveContactsOnline(list); }
-
-
 function contactKey(c){
-  // stable identifier
   return c.id || (c.id = uuidv4());
 }
 
-async function upsertContact(contact){
-  await upsertContactOnline(contact);
-  await renderManager();
-  await renderQuick();
+function upsertContact(contact){
+  const list = loadContacts();
+  const id = contactKey(contact);
+  const idx = list.findIndex(x=>x.id === id);
+  if(idx >= 0) list[idx] = contact;
+  else list.unshift(contact);
+  saveContacts(list);
+  CONTACTS_LOADED = true;
+  renderManager();
+  renderQuick();
+  scheduleAutoSync("upsert");
 }
 
-
-async function deleteContactById(id){
-  await deleteContactOnline(id);
-  await renderManager();
-  await renderQuick();
+function deleteContactById(id){
+  const list = loadContacts().filter(x=>x.id !== id);
+  saveContacts(list);
+  renderManager();
+  renderQuick();
+  scheduleAutoSync("delete");
 }
-
 
 function contactDisplay(c){
   const name = (c.fn || [c.first,c.last].filter(Boolean).join(" ").trim() || c.slug || "Unnamed");
@@ -1315,15 +1581,13 @@ function contactDisplay(c){
   return {name, meta};
 }
 
-let selectedId = null;
-
-async function renderQuick(){
-  const list = await loadContacts();
+function renderQuick(){
+  const list = loadContacts();
   $("quickCount").textContent = `${list.length} contacts`;
   const box = $("quickList");
   box.innerHTML = "";
   if(list.length === 0){
-    box.innerHTML = `<div class="item"><div class="nameLine"><b>No saved contacts</b><span>Create one and press “Save to Manager”.</span></div></div>`;
+    box.innerHTML = `<div class="item"><div class="nameLine"><b>No contacts loaded</b><span>Go to Contacts Manager and press “Discover (Repo)”.</span></div></div>`;
     return;
   }
   list.slice(0,8).forEach(c=>{
@@ -1344,27 +1608,27 @@ async function renderQuick(){
   });
 
   box.querySelectorAll("button[data-act]").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
+    btn.addEventListener("click", ()=>{
       const id = btn.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       if(act === "load"){
-        const c = (await loadContacts()).find(x=>x.id===id);
+        const c = loadContacts().find(x=>x.id===id);
         if(c) loadIntoBuilder(c);
       }else if(act === "del"){
-        if(confirm("Delete this contact from manager?")) await await deleteContactById(id);
+        if(confirm("Delete this contact? (Will auto-sync to GitHub)")) deleteContactById(id);
       }
     });
   });
 }
 
-async function renderManager(){
-  const list = await loadContacts();
+function renderManager(){
+  const list = loadContacts();
   $("managerCount").textContent = String(list.length);
 
   const q = $("search").value.trim().toLowerCase();
   const filtered = !q ? list : list.filter(c=>{
     const {name, meta} = contactDisplay(c);
-    const hay = (name+" "+meta+" "+(c.slug||"")+" "+(c.ig_user||"")+" "+(c.email||"")).toLowerCase();
+    const hay = (name+" "+meta+" "+(c.slug||"")+" "+(c.ig_user||"")+" "+(c.email_user||"")+"@"+(c.email_domain||"")).toLowerCase();
     return hay.includes(q);
   });
 
@@ -1394,30 +1658,29 @@ async function renderManager(){
   }
 
   box.querySelectorAll("button[data-act]").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
+    btn.addEventListener("click", ()=>{
       const id = btn.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       if(act === "select"){
         selectedId = id;
-        const c = (await loadContacts()).find(x=>x.id===id);
+        const c = loadContacts().find(x=>x.id===id);
         renderSelectedMeta(c);
         renderManager();
       }else if(act === "load"){
-        const c = (await loadContacts()).find(x=>x.id===id);
+        const c = loadContacts().find(x=>x.id===id);
         if(c) loadIntoBuilder(c);
       }else if(act === "del"){
-        if(confirm("Delete this contact from manager?")) {
+        if(confirm("Delete this contact? (Will auto-sync to GitHub)")) {
           if(selectedId===id) selectedId=null;
-          await deleteContactById(id);
+          deleteContactById(id);
           renderSelectedMeta(null);
         }
       }
     });
   });
 
-  // quick selected panel update if not yet set
   if(selectedId){
-    const c = (await loadContacts()).find(x=>x.id===selectedId) || null;
+    const c = loadContacts().find(x=>x.id===selectedId) || null;
     renderSelectedMeta(c);
   }else{
     renderSelectedMeta(null);
@@ -1432,7 +1695,7 @@ function renderSelectedMeta(c){
     $("selJpg").textContent = "—";
     return;
   }
-  const {name, meta} = contactDisplay(c);
+  const {name} = contactDisplay(c);
   $("selectedMeta").textContent = `${name} (${c.slug})`;
   $("selHtml").textContent = `${c.slug}.html`;
   $("selVcf").textContent = `${c.slug}.vcf`;
@@ -1440,13 +1703,11 @@ function renderSelectedMeta(c){
 }
 
 function loadIntoBuilder(c){
-  // GitHub settings
   $("owner").value = c.owner || $("owner").value;
   $("repo").value = c.repo || $("repo").value;
   $("branch").value = c.branch || $("branch").value;
   $("path").value = c.path || "";
 
-  // identity
   $("first").value = c.first || "";
   $("last").value  = c.last || "";
   $("fn").value    = c.fn || "";
@@ -1454,19 +1715,15 @@ function loadIntoBuilder(c){
   $("org").value   = c.org || "";
   $("title").value = c.title || "";
 
-  // phone
   $("phone_cc").value = c.phone_cc || "";
   $("phone_num").value = c.phone_num || "";
 
-  // whatsapp
   $("wa_cc").value = c.wa_cc || "";
   $("wa_num").value = c.wa_num || "";
 
-  // email split
   $("email_user").value = c.email_user || "";
   $("email_domain").value = c.email_domain || "";
 
-  // ig
   $("ig_user").value = c.ig_user || "";
 
   $("maps").value = c.maps || "";
@@ -1482,11 +1739,9 @@ function loadIntoBuilder(c){
   $("adr").value = c.adr_raw || "";
   $("categories").value = c.categories || "";
 
-  // photo cannot be loaded into file input due to browser security.
   $("photo").value = "";
-  $("photoInfo").textContent = c.has_photo ? "Photo was used previously (reselect file to upload/zip again)." : "No image selected.";
+  $("photoInfo").textContent = c.has_photo ? "Photo exists in repo (reselect file to upload/zip again)." : "No image selected.";
 
-  // tab switch back to builder
   showTab("builder");
 
   updatePreview();
@@ -1540,7 +1795,6 @@ async function putFile({owner, repo, branch, token, path, filename, contentBase6
   const fullPath = filePathJoin(path, filename);
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(fullPath).replace(/%2F/g,"/")}`;
 
-  // Need SHA if exists
   let sha = null;
   const getRes = await fetch(url, {
     headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
@@ -1570,8 +1824,6 @@ async function putFile({owner, repo, branch, token, path, filename, contentBase6
   return await putRes.json();
 }
 
-let pendingUpload = null;
-
 function openUploadModal(){
   const d = collect();
   $("renameFirst").value = d.first || "";
@@ -1582,14 +1834,13 @@ function closeUploadModal(){
   $("uploadModal").style.display = "none";
 }
 
-async function doUpload(overwriteAllowed=true){
+async function doUpload(){
   const token = $("token").value.trim();
   if(!token) throw new Error("Paste your GitHub token first.");
 
   const d = collect();
   const slug = d.slug;
 
-  // Ensure exists decision already handled if needed
   const vcf = buildVcf(d);
   const html = buildHtml(d);
 
@@ -1627,6 +1878,9 @@ async function doUpload(overwriteAllowed=true){
   const basePages = `https://${d.owner}.github.io/${d.repo}`;
   const prefix = d.path ? `/${d.path}` : "";
   setStatus(`Done. Open: ${basePages}${prefix}/${slug}.html`, "ok");
+
+  // Auto-index into contacts.json
+  upsertFromCurrentFormAfterUpload();
 }
 
 async function uploadWithDecision(){
@@ -1644,126 +1898,52 @@ async function uploadWithDecision(){
     });
 
     if(exists){
-      // open modal with rename/overwrite options
-      pendingUpload = { exists:true };
       openUploadModal();
       return;
     }
 
-    // direct upload
-    await doUpload(true);
+    await doUpload();
     await updateNameStatus();
   }catch(e){
     setStatus(e.message, "err");
   }
 }
 
+function upsertFromCurrentFormAfterUpload(){
+  const d = collect();
+  const contact = {
+    id: uuidv4(),
+    created_at: new Date().toISOString(),
+    owner: d.owner, repo: d.repo, branch: d.branch, path: d.path,
+    first: d.first, last: d.last, fn: d.fn,
+    org: d.org, title: d.title,
+    phone_cc: $("phone_cc").value, phone_num: $("phone_num").value,
+    wa_cc: $("wa_cc").value, wa_num: $("wa_num").value,
+    email_user: $("email_user").value.trim(),
+    email_domain: $("email_domain").value.trim(),
+    ig_user: $("ig_user").value.trim().replace(/^@/,""),
+    maps: d.maps,
+    note: d.note,
+    advanced: d.advanced,
+    url: $("url").value.trim(),
+    tg_user: $("tg_user").value.trim().replace(/^@/,""),
+    work_cc: $("work_cc").value,
+    work_num: $("work_num").value,
+    adr_raw: $("adr").value.trim(),
+    categories: $("categories").value.trim(),
+    has_photo: !!($("photo").files?.[0]) || false,
+    slug: d.slug,
+    manual_slug: ($("manual_slug")?.value || "").trim(),
+    _has_html: true,
+    _source: "uploaded"
+  };
 
-/* =========================
-   Discover existing cards in repo and import into contacts.json
-   - Scans the selected repo/path for *.html/*.vcf/*.jpg
-   - Builds contacts for slugs (firstname_lastname) found
-   - Adds ONLY missing slugs (no overwrite) unless you confirm overwrite
-========================= */
-async function ghListDir(owner, repo, token, path, branch){
-  const p = path ? path.replace(/^\/+|\/+$/g,"") : "";
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(p).replace(/%2F/g,"/")}?ref=${encodeURIComponent(branch)}`;
-  const res = await fetch(url, {
-    headers: {
-      "Accept": "application/vnd.github+json",
-      ...(token ? {"Authorization": `Bearer ${token}`} : {})
-    }
-  });
-  if(!res.ok){
-    const t = await res.text();
-    throw new Error(`Failed to list repo folder: ${res.status} ${t}`);
-  }
-  const j = await res.json();
-  if(!Array.isArray(j)) throw new Error("Folder listing did not return an array. Check path.");
-  return j;
+  const existing = loadContacts().find(x=>String(x.slug||"").toLowerCase() === String(contact.slug).toLowerCase());
+  if(existing && existing.id) contact.id = existing.id;
+
+  upsertContact(contact);
+  scheduleAutoSync("upload");
 }
-
-function parseSlugToNames(slug){
-  const parts = String(slug||"").split("_").filter(Boolean);
-  const cap = (w)=> w ? (w[0].toUpperCase()+w.slice(1)) : "";
-  if(parts.length >= 2){
-    return { first: cap(parts[0]), last: cap(parts.slice(1).join(" ")) };
-  }
-  return { first: cap(parts[0]||""), last: "" };
-}
-
-async function discoverExistingCards(){
-  const token = $("token").value.trim();
-  const spec = getContactsSpec();
-
-  // Listing a private repo folder requires token; public works without but rate-limited.
-  if(!token){
-    const ok = confirm("No GitHub token set. Discovery may fail on private repos or hit rate limits. Continue?");
-    if(!ok) return;
-  }
-
-  setStatus("Discovering existing cards in repo…");
-  const items = await ghListDir(spec.owner, spec.repo, token, spec.path, spec.branch);
-
-  const files = items
-    .filter(x=>x && x.type === "file" && typeof x.name === "string")
-    .map(x=>x.name);
-
-  const html = new Set(files.filter(n=>n.endsWith(".html")).map(n=>n.replace(/\.html$/i,"")));
-  const vcf  = new Set(files.filter(n=>n.endsWith(".vcf")).map(n=>n.replace(/\.vcf$/i,"")));
-  const jpg  = new Set(files.filter(n=>n.match(/\.(jpg|jpeg|png|webp)$/i)).map(n=>n.replace(/\.(jpg|jpeg|png|webp)$/i,"")));
-
-  // Candidate slugs: anything that has an html OR vcf
-  const slugs = Array.from(new Set([...html, ...vcf]))
-    .filter(s=>s && s !== "builder" && s !== "index");
-
-  const existing = ensureIds(await getContacts());
-  const bySlug = new Map(existing.map(c=>[c.slug, c]));
-  const toAdd = [];
-
-  for(const slug of slugs){
-    if(bySlug.has(slug)) continue;
-    const {first, last} = parseSlugToNames(slug);
-    const fn = [first,last].filter(Boolean).join(" ").trim() || slug;
-    toAdd.push({
-      id: uuidv4(),
-      created_at: new Date().toISOString(),
-      owner: spec.owner, repo: spec.repo, branch: spec.branch, path: spec.path,
-      first, last, fn,
-      org: "", title: "",
-      phone_cc: "", phone_num: "",
-      wa_cc: "", wa_num: "",
-      email_user: "", email_domain: "",
-      ig_user: "",
-      maps: "", note: "",
-      advanced: false,
-      url: "", tg_user: "", work_cc: "", work_num: "",
-      adr_raw: "", categories: "",
-      has_photo: jpg.has(slug),
-      slug
-    });
-  }
-
-  if(toAdd.length === 0){
-    setStatus("No new cards found to add (or they already exist in contacts.json).", "ok");
-    await renderManager();
-    await renderQuick();
-    return;
-  }
-
-  const ok = confirm(`Found ${toAdd.length} new card(s) in your repo folder. Add them to ${spec.file}?`);
-  if(!ok){
-    setStatus("Discovery cancelled.", "warn");
-    return;
-  }
-
-  const merged = [...toAdd, ...existing];
-  await saveContactsOnline(merged);
-  setStatus(`Imported ${toAdd.length} card(s) from repo into ${spec.file}.`, "ok");
-  await renderManager();
-  await renderQuick();
-}
-
 
 /* =========================
    Tabs
@@ -1806,15 +1986,13 @@ function debounce(fn, ms=350){
 }
 const debounceNameCheck = debounce(updateNameStatus, 450);
 
-
-// Global error hook (helps debugging if something breaks)
+// Global error hook
 window.addEventListener("unhandledrejection", (e)=>{
   try{
     const msg = (e && e.reason && e.reason.message) ? e.reason.message : String(e.reason||"Unhandled promise rejection");
     if(document.getElementById("status")) setStatus("Async error: " + msg, "err");
   }catch{}
 });
-
 window.addEventListener("error", (e)=>{
   try{
     const msg = (e && e.message) ? e.message : "Unknown error";
@@ -1826,162 +2004,42 @@ window.addEventListener("error", (e)=>{
 });
 
 /* =========================
-   GitHub VIEW-ONLY sync (does NOT save to Contacts Manager)
-========================= */
-let githubTempContacts = null;
-
-async function syncContactsFromGitHubViewOnly(){
-  try{
-    const token = $("token").value.trim();
-    if(!token) throw new Error("Paste your GitHub token first (needed to list repo files).");
-    const owner = $("owner").value.trim();
-    const repo  = $("repo").value.trim();
-    const branch= $("branch").value.trim() || "main";
-    const path  = $("path").value.trim();
-
-    setStatus("Sync (view-only): listing repo folder…");
-
-    const cleanPath = (path||"").replace(/^\/+|\/+$/g,"");
-    const api = `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath ? encodeURIComponent(cleanPath).replace(/%2F/g,"/") : ""}?ref=${encodeURIComponent(branch)}`;
-    const res = await fetch(api, {
-      headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json" }
-    });
-    if(!res.ok){
-      const t = await res.text();
-      throw new Error(`GitHub list failed: ${res.status} ${t}`);
-    }
-    const items = await res.json();
-    if(!Array.isArray(items)) throw new Error("GitHub path is not a folder.");
-
-    const bySlug = new Map();
-    const take = (slug)=>{
-      if(!bySlug.has(slug)) bySlug.set(slug, { slug, has_html:false, has_vcf:false, has_photo:false });
-      return bySlug.get(slug);
-    };
-
-    for(const it of items){
-      if(!it || it.type !== "file" || !it.name) continue;
-      const m = it.name.match(/^(.+)\.(html|vcf|jpg|jpeg|png)$/i);
-      if(!m) continue;
-      const slug = m[1];
-      const ext = m[2].toLowerCase();
-      const rec = take(slug);
-      if(ext === "html") rec.has_html = true;
-      if(ext === "vcf") rec.has_vcf = true;
-      if(ext === "jpg" || ext === "jpeg" || ext === "png") rec.has_photo = true;
-    }
-
-    const cap = (x)=> x ? (x[0].toUpperCase()+x.slice(1)) : "";
-    const toName = (slug)=>{
-      const parts = String(slug||"").split("_").filter(Boolean);
-      if(parts.length>=2) return {first:cap(parts[0]), last:cap(parts.slice(1).join(" "))};
-      return {first:cap(parts[0]||""), last:""};
-    };
-
-    githubTempContacts = [];
-    for(const rec of bySlug.values()){
-      if(!rec.has_html && !rec.has_vcf) continue;
-      const p = toName(rec.slug);
-      githubTempContacts.push({
-        id: uuidv4(),
-        slug: rec.slug,
-        first: p.first,
-        last: p.last,
-        fn: [p.first,p.last].filter(Boolean).join(" ").trim(),
-        org: "",
-        title: "",
-        has_photo: rec.has_photo
-      });
-    }
-
-    renderManagerTemp();
-    setStatus(`Sync (view-only): loaded ${githubTempContacts.length} from GitHub.`, "ok");
-    showTab("manager");
-  }catch(e){
-    setStatus(e.message, "err");
-  }
-}
-
-function renderManagerTemp(){
-  const list = githubTempContacts || [];
-  $("managerCount").textContent = String(list.length);
-  const box = $("managerList");
-  box.innerHTML = "";
-  if(list.length === 0){
-    box.innerHTML = `<div class="item"><div class="nameLine"><b>No cards found in repo</b><span>Check owner/repo/path/branch.</span></div></div>`;
-    return;
-  }
-  list.forEach(c=>{
-    const name = c.fn || c.slug;
-    const el = document.createElement("div");
-    el.className = "item";
-    el.innerHTML = `
-      <div class="nameLine">
-        <b>${escapeHtml(name)}</b>
-        <span>${escapeHtml(c.slug)}</span>
-      </div>
-      <div class="itemActions">
-        <button class="mini" data-act="load" data-slug="${c.slug}">Load Slug</button>
-      </div>
-    `;
-    box.appendChild(el);
-  });
-
-  box.querySelectorAll("button[data-act='load']").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
-      const slug = btn.getAttribute("data-slug");
-      if($("manualSlug")) $("manualSlug").value = slug;
-      setStatus(`Loaded slug from GitHub: ${slug} (view-only).`, "ok");
-      showTab("builder");
-      updatePreview();
-    });
-  });
-}
-
-
-/* =========================
    Init app
 ========================= */
 let appInited = false;
-async function initApp(){
+function initApp(){
   if(appInited) return;
   appInited = true;
 
-  // token auto-load
   const savedToken = localStorage.getItem(LS.token);
   if(savedToken) $("token").value = savedToken;
 
-  // tabs
   $("tabBuilder").addEventListener("click", ()=>showTab("builder"));
   $("tabManager").addEventListener("click", ()=>showTab("manager"));
 
-  // advanced toggle
   $("showAdvanced").addEventListener("change", ()=>{
     $("advancedSection").classList.toggle("hidden", !$("showAdvanced").checked);
     updatePreview();
   });
 
-  // photo
   $("photo").addEventListener("change", ()=>{
     const f = $("photo").files?.[0];
     $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
     updatePreview();
   });
 
-  // email input guard: never allow '@' in username; auto-split if typed
   $("email_user").addEventListener("input", ()=>{
     if($("email_user").value.includes("@")){
       buildEmail($("email_user").value, $("email_domain").value);
     }
   });
 
-  // inputs watch -> preview + name check
   const watchIds = [
     "owner","repo","branch","path","token",
     "first","last","fn","org","title",
     "phone_cc","phone_num","wa_cc","wa_num",
     "email_user","email_domain","ig_user","maps","note",
-    "showAdvanced","url","tg_user","work_cc","work_num","adr","categories"
+    "showAdvanced","url","tg_user","work_cc","work_num","adr","categories","manual_slug"
   ];
   watchIds.forEach(id=>{
     $(id).addEventListener("input", ()=>{
@@ -1994,7 +2052,6 @@ async function initApp(){
     });
   });
 
-  // token buttons
   $("saveTokenBtn").addEventListener("click", ()=>{
     const tok = $("token").value.trim();
     if(!tok) return setStatus("No token to save.", "warn");
@@ -2015,11 +2072,8 @@ async function initApp(){
     updateNameStatus();
   });
 
-  // save contact
-  $("saveContactBtn").addEventListener("click", async ()=>{
+  $("saveContactBtn").addEventListener("click", ()=>{
     const d = collect();
-
-    // store split fields too (for editing later)
     const contact = {
       id: uuidv4(),
       created_at: new Date().toISOString(),
@@ -2039,14 +2093,18 @@ async function initApp(){
       categories: $("categories").value.trim(),
       has_photo: d.has_photo,
       slug: d.slug,
-      manual_slug: ($("manual_slug")?.value || "").trim()
+      manual_slug: ($("manual_slug")?.value || "").trim(),
+      _source: "manual_save"
     };
 
-    await upsertContact(contact);
-    setStatus("Saved to Contacts Manager.", "ok");
+    // preserve id if same slug exists
+    const existing = loadContacts().find(x=>String(x.slug||"").toLowerCase() === String(contact.slug).toLowerCase());
+    if(existing && existing.id) contact.id = existing.id;
+
+    upsertContact(contact);
+    setStatus("Saved to Contacts Manager (auto-sync scheduled).", "ok");
   });
 
-  // ZIP download
   $("downloadZipBtn").addEventListener("click", async ()=>{
     try{
       setStatus("Building ZIP…");
@@ -2057,14 +2115,13 @@ async function initApp(){
     }
   });
 
-  // upload with decision modal
   $("uploadBtn").addEventListener("click", uploadWithDecision);
   $("cancelUpload").addEventListener("click", ()=>{ closeUploadModal(); setStatus("Upload cancelled.", "warn"); });
 
   $("overwriteUpload").addEventListener("click", async ()=>{
     try{
       closeUploadModal();
-      await doUpload(true);
+      await doUpload();
       await updateNameStatus();
     }catch(e){
       setStatus(e.message, "err");
@@ -2076,13 +2133,11 @@ async function initApp(){
       const nf = $("renameFirst").value.trim();
       const nl = $("renameLast").value.trim();
       if(!nf || !nl) throw new Error("Enter new first and last name for rename.");
-      // apply rename into form
       $("first").value = nf;
       $("last").value = nl;
       closeUploadModal();
       updatePreview();
 
-      // re-check existence after rename
       const token = $("token").value.trim();
       const d = collect();
       const exists = await checkIfExists({
@@ -2095,56 +2150,46 @@ async function initApp(){
         await updateNameStatus();
         return;
       }
-      await doUpload(true);
+      await doUpload();
       await updateNameStatus();
     }catch(e){
       setStatus(e.message, "err");
     }
   });
 
+  $("refreshManagerBtn").addEventListener("click", ()=>{ renderQuick(); setStatus("Manager refreshed.", "ok"); });
 
-  // GitHub view-only sync (does NOT save to localStorage)
-    
+  $("search").addEventListener("input", renderManager);
 
-
-  // Reload online contacts.json from GitHub (does not rely on local storage)
-  if($("reloadOnlineBtn")) $("reloadOnlineBtn").addEventListener("click", async ()=>{
-    contactsLoadedOnce = false;
-    await loadContactsOnline();
-    await renderManager();
-    await renderQuick();
-    setStatus("Reloaded contacts from GitHub.", "ok");
-  });
-
-  // quick manager refresh
-  $("refreshManagerBtn").addEventListener("click", async ()=>{ await renderQuick(); setStatus("Manager refreshed.", "ok"); });
-
-  // manager search
-  $("search").addEventListener("input", async ()=>{ await renderManager(); });
-
-  // load selected
   $("loadSelectedBtn").addEventListener("click", ()=>{
     if(!selectedId) return;
-    const c = (await loadContacts()).find(x=>x.id===selectedId);
+    const c = loadContacts().find(x=>x.id===selectedId);
     if(c) loadIntoBuilder(c);
   });
 
-  // delete selected
   $("deleteSelectedBtn").addEventListener("click", ()=>{
     if(!selectedId) return;
-    const ok = confirm("Delete selected contact?");
+    const ok = confirm("Delete selected contact? (Will auto-sync to GitHub)");
     if(!ok) return;
-    await deleteContactById(selectedId);
+    deleteContactById(selectedId);
     selectedId = null;
     renderSelectedMeta(null);
-    setStatus("Deleted.", "ok");
+    setStatus("Deleted (auto-sync scheduled).", "ok");
   });
 
-  // export/import contacts
-  $("exportContactsBtn").addEventListener("click", async ()=>{
-    const data = await loadContacts();
+  $("discoverContactsBtn").addEventListener("click", async ()=>{
+    try{
+      await discoverContactsFromGitHub();
+    }catch(e){
+      setStatus(e.message, "err");
+    }
+  });
+
+  $("exportContactsBtn").addEventListener("click", ()=>{
+    const data = loadContacts();
     downloadText("cardx_contacts.json", JSON.stringify(data, null, 2));
   });
+
   $("importContactsBtn").addEventListener("click", ()=>$("importFile").click());
   $("importFile").addEventListener("change", async ()=>{
     try{
@@ -2153,19 +2198,19 @@ async function initApp(){
       const txt = await f.text();
       const json = JSON.parse(txt);
       if(!Array.isArray(json)) throw new Error("Invalid JSON (expected array).");
-      // basic sanitize
       json.forEach(c=>{ if(!c.id) c.id = uuidv4(); });
-      await saveContacts(json);
+      saveContacts(json);
+      CONTACTS_LOADED = true;
       $("importFile").value = "";
-      await renderManager();
-      await renderQuick();
-      setStatus("Imported contacts.", "ok");
+      renderManager();
+      renderQuick();
+      setStatus("Imported contacts (auto-sync scheduled).", "ok");
+      scheduleAutoSync("import");
     }catch(e){
       setStatus(e.message, "err");
     }
   });
 
-  // file downloads (locally generated)
   $("dlHtml").addEventListener("click", ()=>{
     const d = collect();
     downloadText(`${d.slug}.html`, buildHtml(d));
@@ -2181,13 +2226,34 @@ async function initApp(){
     downloadBlob(`${d.slug}.jpg`, f);
   });
 
-  // initial render
   updatePreview();
-  await renderQuick();
-  await renderManager();
+  renderQuick();
+  renderManager();
   updateNameStatus();
+  setStatus("Tip: Open Contacts Manager and press “Discover (Repo)” to pull existing .vcf/.html/.jpg and auto-create/update cardx_contacts.json.", "ok");
 }
 
+/* =========================
+   Login init hooks
+========================= */
+$("setPassBtn").addEventListener("click", setPassword);
+$("loginBtn").addEventListener("click", login);
+$("logoutBtn").addEventListener("click", logout);
+$("resetAllBtn").addEventListener("click", resetSuite);
+
+$("loginPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
+$("setPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") setPassword(); });
+
+(function start(){
+  if(sessionStorage.getItem(LS.session)==="1"){
+    showApp();
+  }else{
+    $("loginView").style.display = "flex";
+    $("appView").style.display = "none";
+    const hasPass = !!localStorage.getItem(LS.passHash);
+    setLoginStatus(hasPass ? "Enter password to login." : "No password set yet. Create one above.", hasPass ? "" : "warn");
+  }
+})();
 </script>
 </body>
 </html>
