@@ -739,9 +739,21 @@ function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
    Login (Option B - local)
 ========================= */
 async function sha256(str){
-  const enc = new TextEncoder().encode(str);
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  // Works on HTTPS (GitHub Pages). If opened via file://, WebCrypto may be unavailable.
+  try{
+    if(window.isSecureContext && crypto && crypto.subtle && crypto.subtle.digest){
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+  }catch(_){}
+  // Fallback (not cryptographically strong, but prevents login from breaking offline).
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ("00000000" + (h>>>0).toString(16)).slice(-8);
 }
 
 async function setPassword(){
