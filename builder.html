@@ -254,37 +254,8 @@
 <body>
   <div class="bg"></div>
 
-  <!-- LOGIN VIEW -->
-  <div id="loginView" class="loginWrap">
-    <div class="loginCard">
-      <h1 style="font-size:22px;margin:0 0 6px;">CARDX Builder Suite</h1>
-      <p class="sub" style="margin-bottom:10px;">
-        Local password gate (Option B). <span class="mono">Note:</span> this is a “speed bump”, not true server-side security.
-      </p>
-
-      <div class="divider"></div>
-
-      <label>Set / Change password</label>
-      <input id="setPass" type="password" placeholder="Create a password for this device" />
-      <div class="row">
-        <button class="primary" id="setPassBtn">Set Password</button>
-        <button class="danger" id="resetAllBtn">Reset Suite (clears saved data)</button>
-      </div>
-      <div class="mono help">Password is stored as a hash in <span class="kbd">localStorage</span>. No server.</div>
-
-      <div class="divider"></div>
-
-      <label>Login</label>
-      <input id="loginPass" type="password" placeholder="Enter password" />
-      <div class="row">
-        <button class="primary" id="loginBtn">Login</button>
-      </div>
-      <div id="loginStatus" class="mono" style="margin-top:10px;"></div>
-    </div>
-  </div>
-
   <!-- APP VIEW -->
-  <div id="appView" class="wrap" style="display:none;">
+<div id="appView" class="wrap" >
     <div class="topBar">
       <div>
         <h1>CARDX Builder Suite</h1>
@@ -295,8 +266,7 @@
           <span id="nameDot" class="dot"></span>
           <span id="nameText">Name status: —</span>
         </div>
-        <button id="logoutBtn" class="danger">Logout</button>
-      </div>
+        </div>
     </div>
 
     <div class="tabs">
@@ -2218,29 +2188,6 @@ async function initApp(){
   updateNameStatus();
 }
 
-/* =========================
-   Login init hooks
-========================= */
-$("setPassBtn").addEventListener("click", setPassword);
-$("loginBtn").addEventListener("click", login);
-$("logoutBtn").addEventListener("click", logout);
-$("resetAllBtn").addEventListener("click", resetSuite);
-
-// Enter-to-login
-$("loginPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
-$("setPass").addEventListener("keydown", (e)=>{ if(e.key==="Enter") setPassword(); });
-
-// App start: if session exists, show app
-(function start(){
-  if(sessionStorage.getItem(LS.session)==="1"){
-    showApp();
-  }else{
-    $("loginView").style.display = "flex";
-    $("appView").style.display = "none";
-    const hasPass = !!localStorage.getItem(LS.passHash);
-    setLoginStatus(hasPass ? "Enter password to login." : "No password set yet. Create one above.", hasPass ? "" : "warn");
-  }
-})();
 </script>
 </body>
 </html>
