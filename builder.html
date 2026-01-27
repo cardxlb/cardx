@@ -706,11 +706,6 @@ async function sha256(str){
 }
 
 async function setPassword(){
-  const p = $("setPass").value;
-  if(!p || p.length < 6){
-    setLoginStatus("Use at least 6 characters.", "warn");
-    return;
-  }
   const h = await sha256(p);
   localStorage.setItem(LS.passHash, h);
   setLoginStatus("Password set for this device. Now login below.", "ok");
