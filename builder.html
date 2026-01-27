@@ -258,7 +258,9 @@
   <div id="loginView" class="loginWrap">
     <div class="loginCard">
       <h1 style="font-size:22px;margin:0 0 6px;">CARDX Builder Suite</h1>
-     
+      <p class="sub" style="margin-bottom:10px;">
+        Local password gate (Option B). <span class="mono">Note:</span> this is a “speed bump”, not true server-side security.
+      </p>
 
       <div class="divider"></div>
 
@@ -464,7 +466,14 @@
               <label>Categories (comma separated) (optional)</label>
               <input id="categories" placeholder="Finance,Crypto,Business" />
             </div>
-          </div>
+          
+
+            <div class="full">
+              <label>Manual filename (slug) override (optional)</label>
+              <input id="manual_slug" placeholder="e.g. mahmoud_chatila" />
+              <div class="small help">If set, filenames become <span class="kbd">manual_slug.html</span>, <span class="kbd">manual_slug.vcf</span>, <span class="kbd">manual_slug.jpg</span> (if photo).</div>
+            </div>
+</div>
         </div>
 
         <div class="previewBox">
@@ -611,6 +620,19 @@ const LS = {
   contacts: "cardx_contacts_v1",
 };
 
+// UUID helper (Safari/iOS compatibility)
+function uuidv4(){
+  if(window.crypto && crypto.randomUUID) return uuidv4();
+  // RFC4122-ish fallback
+  const rnd = (n)=>Math.floor(Math.random()*n);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c=>{
+    const r = rnd(16);
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+
 function setStatus(msg, cls=""){
   const el = $("status");
   el.className = "mono " + cls;
@@ -622,6 +644,14 @@ function setLoginStatus(msg, cls=""){
   el.textContent = msg;
 }
 function digitsOnly(s){ return String(s||"").replace(/\D/g,""); }
+
+function sanitizeSlug(raw){
+  return String(raw||"")
+    .trim().toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/^_+|_+$/g, "");
+}
 
 function slugify(first, last){
   const clean = (s)=> (s||"")
@@ -1039,7 +1069,8 @@ function collect(){
 
   const first = $("first").value.trim();
   const last  = $("last").value.trim();
-  const slug  = slugify(first,last);
+  const manual = sanitizeSlug($("manual_slug") ? $("manual_slug").value : "");
+  const slug  = manual || slugify(first,last);
 
   const fallbackFN = [first,last].filter(Boolean).join(" ").trim();
   const fn = $("fn").value.trim() || fallbackFN || slug;
@@ -1064,6 +1095,7 @@ function collect(){
   return {
     owner, repo, branch, path,
     first, last, slug,
+    manual_slug: ( $("manual_slug") ? $("manual_slug").value.trim() : "" ),
     fn,
     org: $("org").value.trim(),
     title: $("title").value.trim(),
@@ -1156,7 +1188,7 @@ function saveContacts(list){
 
 function contactKey(c){
   // stable identifier
-  return c.id || (c.id = crypto.randomUUID());
+  return c.id || (c.id = uuidv4());
 }
 
 function upsertContact(contact){
@@ -1567,6 +1599,24 @@ function debounce(fn, ms=350){
 }
 const debounceNameCheck = debounce(updateNameStatus, 450);
 
+
+// Global error hook (helps debugging if something breaks)
+window.addEventListener("unhandledrejection", (e)=>{
+  try{
+    const msg = (e && e.reason && e.reason.message) ? e.reason.message : String(e.reason||"Unhandled promise rejection");
+    if(document.getElementById("status")) setStatus("Async error: " + msg, "err");
+  }catch{}
+});
+
+window.addEventListener("error", (e)=>{
+  try{
+    const msg = (e && e.message) ? e.message : "Unknown error";
+    const where = (e && e.filename) ? (e.filename.split("/").slice(-1)[0] + ":" + (e.lineno||"")) : "";
+    if(document.getElementById("status")){
+      setStatus("JS error: " + msg + (where ? " ("+where+")" : ""), "err");
+    }
+  }catch{}
+});
 /* =========================
    Init app
 ========================= */
@@ -1649,7 +1699,7 @@ function initApp(){
 
     // store split fields too (for editing later)
     const contact = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       created_at: new Date().toISOString(),
       owner: d.owner, repo: d.repo, branch: d.branch, path: d.path,
       first: d.first, last: d.last, fn: d.fn,
@@ -1666,7 +1716,8 @@ function initApp(){
       adr_raw: $("adr").value.trim(),
       categories: $("categories").value.trim(),
       has_photo: d.has_photo,
-      slug: d.slug
+      slug: d.slug,
+      manual_slug: ($("manual_slug")?.value || "").trim()
     };
 
     upsertContact(contact);
@@ -1767,7 +1818,7 @@ function initApp(){
       const json = JSON.parse(txt);
       if(!Array.isArray(json)) throw new Error("Invalid JSON (expected array).");
       // basic sanitize
-      json.forEach(c=>{ if(!c.id) c.id = crypto.randomUUID(); });
+      json.forEach(c=>{ if(!c.id) c.id = uuidv4(); });
       saveContacts(json);
       $("importFile").value = "";
       renderManager();
