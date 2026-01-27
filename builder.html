@@ -249,6 +249,39 @@
   .modal h3{margin:0 0 6px;font-size:16px}
   .modal p{margin:0 0 12px;color:var(--muted);font-size:13px}
   .modal .row{justify-content:flex-end}
+
+
+/* New Card reset animation */
+.builderResetFlash {
+  animation: builderFlash 0.55s ease;
+}
+
+@keyframes builderFlash {
+  0% {
+    box-shadow: 0 0 0 rgba(58,128,246,0);
+    filter: brightness(1);
+    transform: translateX(0);
+  }
+  20% {
+    box-shadow: 0 0 0 2px rgba(58,128,246,0.65),
+                0 0 24px rgba(58,128,246,0.45);
+    filter: brightness(1.15);
+    transform: translateX(-2px);
+  }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1px); }
+  80% {
+    box-shadow: 0 0 0 1px rgba(58,128,246,0.35),
+                0 0 14px rgba(58,128,246,0.25);
+    filter: brightness(1.05);
+    transform: translateX(1px);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(58,128,246,0);
+    filter: brightness(1);
+    transform: translateX(0);
+  }
+}
 </style>
 </head>
 <body>
@@ -486,6 +519,7 @@
           <button class="primary" id="saveContactBtn">Save to Manager</button>
           <button id="downloadZipBtn">Download ZIP</button>
           <button class="primary" id="uploadBtn">Upload to GitHub</button>
+          <button id="newCardBtn" class="mini danger">New Card</button>
         </div>
 
         <div class="mono" style="margin-top:12px;" id="status"></div>
@@ -1986,6 +2020,78 @@ function debounce(fn, ms=350){
 }
 const debounceNameCheck = debounce(updateNameStatus, 450);
 
+function flashBuilderReset(){
+  const panel = $("builderPanel");
+  if(!panel) return;
+  panel.classList.remove("builderResetFlash");
+  // force reflow so animation can restart
+  void panel.offsetWidth;
+  panel.classList.add("builderResetFlash");
+}
+
+function newCard(){
+  const ok = confirm(
+    "Start a new contact card?\n\n" +
+    "This will clear the form for a new person.\n" +
+    "It will NOT affect existing contacts or GitHub."
+  );
+  if(!ok) return;
+
+  // Identity
+  $("first").value = "";
+  $("last").value = "";
+  $("fn").value = "";
+
+  $("org").value = "";
+  $("title").value = "";
+
+  // Phone
+  $("phone_cc").value = "";
+  $("phone_num").value = "";
+
+  // WhatsApp
+  $("wa_cc").value = "";
+  $("wa_num").value = "";
+
+  // Email
+  $("email_user").value = "";
+  $("email_domain").value = "";
+
+  // Social / misc
+  $("ig_user").value = "";
+  $("maps").value = "";
+  $("note").value = "";
+
+  // Advanced
+  $("showAdvanced").checked = false;
+  $("advancedSection").classList.add("hidden");
+
+  $("url").value = "";
+  $("tg_user").value = "";
+  $("work_cc").value = "";
+  $("work_num").value = "";
+  $("adr").value = "";
+  $("categories").value = "";
+
+  // Slug override
+  if($("manual_slug")) $("manual_slug").value = "";
+
+  // Photo
+  $("photo").value = "";
+  $("photoInfo").textContent = "No image selected.";
+
+  // Clear selection in manager
+  selectedId = null;
+  renderSelectedMeta(null);
+
+  // Update preview + name check
+  updatePreview();
+  debounceNameCheck();
+
+  flashBuilderReset();
+  setStatus("New contact card ready. Fill in details for the next person.", "ok");
+}
+
 // Global error hook
 window.addEventListener("unhandledrejection", (e)=>{
   try{
@@ -2104,6 +2210,10 @@ function initApp(){
     upsertContact(contact);
     setStatus("Saved to Contacts Manager (auto-sync scheduled).", "ok");
   });
+
+
+  // New Card (clear builder)
+  $("newCardBtn").addEventListener("click", newCard);
 
   $("downloadZipBtn").addEventListener("click", async ()=>{
     try{
