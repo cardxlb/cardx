@@ -40,6 +40,20 @@
       padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
       background:rgba(255,255,255,.06)
     }
+
+    /* Integrated / half-field groups */
+    .group{display:flex;gap:8px;align-items:stretch}
+    .group input{border-radius:12px}
+    .group .fixed{
+      display:flex;align-items:center;justify-content:center;
+      padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);color:rgba(255,255,255,.85);
+      font-size:14px;white-space:nowrap
+    }
+    .group .cc{max-width:92px; text-align:center}
+    .group .user{min-width:0; flex: 1}
+    .group .domain{min-width:0; flex: 1}
+    .help{margin-top:6px}
   </style>
 </head>
 <body>
@@ -69,7 +83,7 @@
         <div class="full">
           <label>GitHub Token (Fine-grained PAT with Contents: Read/Write)</label>
           <input id="token" type="password" placeholder="Paste token here (stored only in your browser)" />
-          <div class="mono" style="margin-top:6px;">Tip: this is saved in <b>localStorage</b> if you click “Save Token”.</div>
+          <div class="mono help">Tip: saved in <b>localStorage</b> if you click “Save Token”.</div>
         </div>
 
         <div>
@@ -82,58 +96,64 @@
         </div>
 
         <div class="full">
-          <label>Full display name (FN)</label>
+          <label>Full display name (FN) (optional — defaults to First + Last)</label>
           <input id="fn" value="Mahmoud Chatila" />
         </div>
 
         <div>
-          <label>Company (ORG)</label>
+          <label>Company (ORG) (optional)</label>
           <input id="org" value="Chatila Financial Group" />
         </div>
         <div>
-          <label>Title (TITLE)</label>
+          <label>Title (TITLE) (optional)</label>
           <input id="title" value="Chief Executive Officer" />
         </div>
 
-        <!-- PHONE split -->
-        <div>
-          <label>Phone country code (digits)</label>
-          <input id="phone_cc" value="961" inputmode="numeric" placeholder="e.g. 961" />
-        </div>
-        <div>
-          <label>Phone number (digits)</label>
-          <input id="phone_num" value="78929249" inputmode="numeric" placeholder="e.g. 78929249" />
-        </div>
-
-        <!-- WHATSAPP split -->
-        <div>
-          <label>WhatsApp country code (digits)</label>
-          <input id="wa_cc" value="961" inputmode="numeric" placeholder="e.g. 961" />
-        </div>
-        <div>
-          <label>WhatsApp number (digits)</label>
-          <input id="wa_num" value="78929249" inputmode="numeric" placeholder="e.g. 78929249" />
+        <!-- Integrated PHONE -->
+        <div class="full">
+          <label>Phone (optional)</label>
+          <div class="group">
+            <span class="fixed">+</span>
+            <input id="phone_cc" class="cc" inputmode="numeric" placeholder="cc" value="961" />
+            <input id="phone_num" class="user" inputmode="numeric" placeholder="number" value="78929249" />
+          </div>
+          <div class="small help">Produces: <span class="mono">+ccnumber</span> (E.164)</div>
         </div>
 
-        <!-- EMAIL split -->
-        <div>
-          <label>Email username</label>
-          <input id="email_user" value="mahmoudchatila974" placeholder="before @" />
-        </div>
-        <div>
-          <label>Email domain</label>
-          <input id="email_domain" value="gmail.com" placeholder="gmail.com" />
-        </div>
-
-        <!-- INSTAGRAM username only -->
-        <div>
-          <label>Instagram username</label>
-          <input id="ig_user" value="mahmoud__chatila" placeholder="username only" />
-          <div class="small">Builder will create: <span class="mono">https://instagram.com/username</span></div>
+        <!-- Integrated WHATSAPP -->
+        <div class="full">
+          <label>WhatsApp (optional)</label>
+          <div class="group">
+            <span class="fixed">wa.me/</span>
+            <input id="wa_cc" class="cc" inputmode="numeric" placeholder="cc" value="961" />
+            <input id="wa_num" class="user" inputmode="numeric" placeholder="number" value="78929249" />
+          </div>
+          <div class="small help">Produces: <span class="mono">https://wa.me/ccnumber</span></div>
         </div>
 
-        <div>
-          <label>Location URL (Google Maps link)</label>
+        <!-- Integrated EMAIL -->
+        <div class="full">
+          <label>Email (optional)</label>
+          <div class="group">
+            <input id="email_user" class="user" placeholder="username" value="mahmoudchatila974" />
+            <span class="fixed">@</span>
+            <input id="email_domain" class="domain" placeholder="domain.com" value="gmail.com" />
+          </div>
+          <div class="small help">Produces: <span class="mono">username@domain.com</span></div>
+        </div>
+
+        <!-- Instagram username only -->
+        <div class="full">
+          <label>Instagram (optional)</label>
+          <div class="group">
+            <span class="fixed">instagram.com/</span>
+            <input id="ig_user" class="user" placeholder="username" value="mahmoud__chatila" />
+          </div>
+          <div class="small help">Produces: <span class="mono">https://instagram.com/username</span></div>
+        </div>
+
+        <div class="full">
+          <label>Location URL (Google Maps link) (optional)</label>
           <input id="maps" value="https://maps.app.goo.gl/QyvitV4g9yrkvxcp7" />
         </div>
 
@@ -143,9 +163,9 @@
         </div>
 
         <div class="full">
-          <label>Profile image (.jpg/.png)</label>
+          <label>Profile image (.jpg/.png) (optional — if empty, NO image section appears)</label>
           <input id="photo" type="file" accept="image/*" />
-          <div class="mono" id="photoInfo" style="margin-top:6px;">No image selected.</div>
+          <div class="mono help" id="photoInfo">No image selected.</div>
         </div>
 
         <div class="full divider"></div>
@@ -157,7 +177,7 @@
               <input id="showAdvanced" type="checkbox" />
               <label for="showAdvanced" style="margin:0;cursor:pointer;">Show advanced fields</label>
             </div>
-            <div class="small">Default stays simple. Advanced adds extra vCard + extra buttons.</div>
+            <div class="small">Default stays simple. Advanced adds extra vCard + extra buttons. Empty advanced fields won’t show.</div>
           </div>
           <div class="small mono" id="existsLine">—</div>
         </div>
@@ -165,32 +185,36 @@
         <!-- ADVANCED FIELDS (hidden by default) -->
         <div id="advancedSection" class="full hidden">
           <div class="grid" style="margin-top:12px">
-            <div>
+            <div class="full">
               <label>Website URL (optional)</label>
               <input id="url" placeholder="https://example.com" />
             </div>
-            <div>
+
+            <div class="full">
               <label>Telegram username (optional)</label>
-              <input id="tg_user" placeholder="username (no @)" />
+              <div class="group">
+                <span class="fixed">t.me/</span>
+                <input id="tg_user" class="user" placeholder="username" />
+              </div>
             </div>
 
-            <div>
-              <label>Second phone (Work) country code</label>
-              <input id="work_cc" inputmode="numeric" placeholder="e.g. 961" />
-            </div>
-            <div>
-              <label>Second phone (Work) number</label>
-              <input id="work_num" inputmode="numeric" placeholder="e.g. 70123456" />
+            <div class="full">
+              <label>Second phone (Work) (optional)</label>
+              <div class="group">
+                <span class="fixed">+</span>
+                <input id="work_cc" class="cc" inputmode="numeric" placeholder="cc" />
+                <input id="work_num" class="user" inputmode="numeric" placeholder="number" />
+              </div>
             </div>
 
             <div class="full">
               <label>Address (ADR) (optional)</label>
-              <input id="adr" placeholder="Street;City;Region;Postal;Country  (we'll format it)" />
-              <div class="small">Example: <span class="mono">Verdun;Beirut;;;Lebanon</span></div>
+              <input id="adr" placeholder="Street;City;Region;Postal;Country" />
+              <div class="small help">Example: <span class="mono">Verdun;Beirut;;;Lebanon</span></div>
             </div>
 
             <div class="full">
-              <label>Categories (comma separated)</label>
+              <label>Categories (comma separated) (optional)</label>
               <input id="categories" placeholder="Finance,Crypto,Business" />
             </div>
           </div>
@@ -208,7 +232,7 @@
         <button id="saveTokenBtn">Save Token</button>
         <button id="loadTokenBtn">Load Saved Token</button>
         <button id="clearTokenBtn">Clear Saved Token</button>
-        <button id="downloadBtn">Download 3 files</button>
+        <button id="downloadBtn">Download files</button>
         <button id="uploadBtn">Upload to GitHub</button>
       </div>
 
@@ -231,7 +255,6 @@
   function digitsOnly(s){ return String(s||"").replace(/\D/g,""); }
 
   function base64FromText(text){
-    // UTF-8 safe base64
     return btoa(unescape(encodeURIComponent(text)));
   }
 
@@ -267,10 +290,8 @@
   }
 
   function buildAdrLine(adrRaw){
-    // Input example: "Verdun;Beirut;;;Lebanon" => ADR:;;Verdun;Beirut;;;Lebanon
     const s = String(adrRaw||"").trim();
     if(!s) return "";
-    // Allow user to input Street;City;Region;Postal;Country
     const parts = s.split(";").map(x=>x.trim());
     const street = parts[0] || "";
     const city   = parts[1] || "";
@@ -281,7 +302,6 @@
   }
 
   function buildVcf(data){
-    // vCard 3.0 - core + optional advanced
     const lines = [
       "BEGIN:VCARD",
       "VERSION:3.0",
@@ -314,12 +334,18 @@
     const basePages = `https://${owner}.github.io/${repo}`;
     const prefix = path ? path.replace(/^\/+|\/+$/g,"") + "/" : "";
     const vcfUrl = `${basePages}/${prefix}${slug}.vcf`;
-    const imgRaw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${slug}.jpg`;
+
+    const hasPhoto = !!data.has_photo;
+    const imgRaw = hasPhoto
+      ? `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${prefix}${slug}.jpg`
+      : "";
 
     const igUrl = data.ig_url || "";
     const waLink = data.wa_digits ? `https://wa.me/${data.wa_digits}` : "";
     const telLink = data.tel_e164 ? `tel:${data.tel_e164}` : "";
     const mailLink = data.email ? `mailto:${data.email}` : "";
+
+    const showSubtitle = !!(data.title || data.org);
 
     const extraButtons = data.advanced ? `
         ${data.url ? `
@@ -335,7 +361,6 @@
         </a>` : ""}
     ` : "";
 
-    // Single clean template
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -475,9 +500,10 @@
   <main class="page">
     <div class="stack">
       <div class="container">
-        <img src="${imgRaw}" class="profile" alt="Profile Photo" />
+        ${hasPhoto ? `<img src="${imgRaw}" class="profile" alt="Profile Photo" />` : ""}
+
         <h1>${escapeHtml(data.fn)}</h1>
-        <h2>${escapeHtml(data.title)} – ${escapeHtml(data.org)}</h2>
+        ${showSubtitle ? `<h2>${escapeHtml(data.title || "")}${(data.title && data.org) ? " – " : ""}${escapeHtml(data.org || "")}</h2>` : ""}
 
         <a class="btn" href="${vcfUrl}">
           <img class="icon" src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/icons/person-check.svg" alt="">
@@ -540,10 +566,13 @@
     const path = $("path").value.trim().replace(/^\/+|\/+$/g,"");
 
     const first = $("first").value.trim();
-    const last = $("last").value.trim();
-    const slug = slugify(first,last);
+    const last  = $("last").value.trim();
+    const slug  = slugify(first,last);
 
-    const tel_e164 = buildE164($("phone_cc").value, $("phone_num").value);
+    const fallbackFN = [first,last].filter(Boolean).join(" ").trim();
+    const fn = $("fn").value.trim() || fallbackFN || slug;
+
+    const tel_e164  = buildE164($("phone_cc").value, $("phone_num").value);
     const wa_digits = buildWaDigits($("wa_cc").value, $("wa_num").value);
 
     const email = buildEmail($("email_user").value, $("email_domain").value);
@@ -557,10 +586,12 @@
     const adr_raw = advanced ? $("adr").value.trim() : "";
     const categories = advanced ? $("categories").value.trim().replace(/\s*,\s*/g, ",") : "";
 
+    const has_photo = !!($("photo").files?.[0]);
+
     return {
       owner, repo, branch, path,
       first, last, slug,
-      fn: $("fn").value.trim(),
+      fn,
       org: $("org").value.trim(),
       title: $("title").value.trim(),
       tel_e164,
@@ -569,6 +600,7 @@
       ig_url,
       maps: $("maps").value.trim(),
       note: $("note").value.trim(),
+      has_photo,
       advanced,
       // advanced extras
       work_e164, url, tg_user, adr_raw, categories
@@ -577,14 +609,13 @@
 
   function updatePreview(){
     const d = collect();
-    const slug = d.slug;
-    $("slugLine").textContent = `${slug}.html | ${slug}.vcf | ${slug}.jpg`;
+    $("slugLine").textContent = `${d.slug}.html | ${d.slug}.vcf` + (d.has_photo ? ` | ${d.slug}.jpg` : ``);
 
     const basePages = `https://${d.owner}.github.io/${d.repo}`;
     const prefix = d.path ? `/${d.path}` : "";
     $("urlsLine").innerHTML =
-      `<a href="${basePages}${prefix}/${slug}.html" target="_blank">${basePages}${prefix}/${slug}.html</a><br>` +
-      `<a href="${basePages}${prefix}/${slug}.vcf" target="_blank">${basePages}${prefix}/${slug}.vcf</a>`;
+      `<a href="${basePages}${prefix}/${d.slug}.html" target="_blank">${basePages}${prefix}/${d.slug}.html</a><br>` +
+      `<a href="${basePages}${prefix}/${d.slug}.vcf" target="_blank">${basePages}${prefix}/${d.slug}.vcf</a>`;
   }
 
   async function readImageBase64(file){
@@ -651,7 +682,8 @@
       const token = $("token").value.trim();
       const d = collect();
       if(!token){
-        $("existsLine").textContent = "Exist check: (token required)";
+        $("existsLine").textContent = "Name status: (token required)";
+        $("existsLine").className = "small mono warn";
         return;
       }
       const exists = await checkIfExists({
@@ -678,7 +710,6 @@
   watchIds.forEach(id=>{
     $(id).addEventListener("input", ()=>{
       updatePreview();
-      // light debounce
       window.clearTimeout(window.__exDebounce);
       window.__exDebounce = window.setTimeout(updateExistsBadge, 350);
     });
@@ -697,6 +728,7 @@
   $("photo").addEventListener("change", ()=>{
     const f = $("photo").files?.[0];
     $("photoInfo").textContent = f ? `Selected: ${f.name} (${Math.round(f.size/1024)} KB)` : "No image selected.";
+    updatePreview();
   });
 
   $("saveTokenBtn").addEventListener("click", ()=>{
@@ -730,8 +762,8 @@
 
       const f = $("photo").files?.[0];
       if(f) downloadBlob(`${d.slug}.jpg`, f);
-      else setStatus("Downloaded .vcf + .html. (No image selected to download.)", "warn");
-      if(f) setStatus("Downloaded .vcf + .html + image.", "ok");
+
+      setStatus(`Downloaded ${d.slug}.html + ${d.slug}.vcf` + (f ? ` + ${d.slug}.jpg` : ``), "ok");
     }catch(e){
       setStatus(e.message, "err");
     }
@@ -745,7 +777,6 @@
       const d = collect();
       const slug = d.slug;
 
-      // Existence check
       setStatus("Checking if name already exists…");
       const exists = await checkIfExists({
         owner: d.owner, repo: d.repo, token,
@@ -768,12 +799,6 @@
       const vcf = buildVcf(d);
       const html = buildHtml(d);
 
-      const imgFile = $("photo").files?.[0];
-      if(!imgFile) throw new Error("Select a profile image before upload (it will be saved as slug.jpg).");
-
-      setStatus("Reading image…");
-      const img = await readImageBase64(imgFile);
-
       setStatus("Uploading .vcf…");
       await putFile({
         owner: d.owner, repo: d.repo, branch: d.branch, token,
@@ -792,14 +817,18 @@
         message: `CARDX: update ${slug}.html`
       });
 
-      setStatus("Uploading image…");
-      await putFile({
-        owner: d.owner, repo: d.repo, branch: d.branch, token,
-        path: d.path,
-        filename: `${slug}.jpg`,
-        contentBase64: img.base64,
-        message: `CARDX: update ${slug}.jpg`
-      });
+      const imgFile = $("photo").files?.[0];
+      if(imgFile){
+        setStatus("Uploading image…");
+        const img = await readImageBase64(imgFile);
+        await putFile({
+          owner: d.owner, repo: d.repo, branch: d.branch, token,
+          path: d.path,
+          filename: `${slug}.jpg`,
+          contentBase64: img.base64,
+          message: `CARDX: update ${slug}.jpg`
+        });
+      }
 
       const basePages = `https://${d.owner}.github.io/${d.repo}`;
       const prefix = d.path ? `/${d.path}` : "";
