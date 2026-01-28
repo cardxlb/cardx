@@ -1,7 +1,7 @@
 [
   {
     "id": "f72d0134-59e4-40a0-8516-53776d22aab4",
-    "created_at": "2026-01-28T07:12:51.104Z",
+    "created_at": "2026-01-28T07:12:55.285Z",
     "owner": "cardxlb",
     "repo": "cardx",
     "branch": "main",
@@ -30,7 +30,8 @@
     "has_photo": false,
     "slug": "christopher_rahbani",
     "manual_slug": "",
-    "_source": "manual_save"
+    "_has_html": true,
+    "_source": "uploaded"
   },
   {
     "id": "6b0be81f-da96-4e14-8727-c4bb561e3b27",
