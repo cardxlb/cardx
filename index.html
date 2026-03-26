@@ -25,6 +25,7 @@
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       background: linear-gradient(180deg, #f4f7fb 0%, #e9eff7 100%);
@@ -112,7 +113,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      grid-template-columns: 1.05fr 0.95fr;
       gap: 20px;
       margin-top: 20px;
     }
@@ -306,17 +307,6 @@
       line-height: 1.6;
     }
 
-    .banner {
-      border-radius: 16px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      background: #fbfcfe;
-      margin-top: 12px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: var(--text);
-    }
-
     .key-modal {
       position: fixed;
       inset: 0;
@@ -397,7 +387,7 @@
       <div class="eyebrow">Chatila Financial Group</div>
       <h1>Institutional SOL Position Monitor</h1>
       <div class="sub">
-        Client-facing live monitoring dashboard for one fixed leveraged SOL long. Estimated close values update from live market data. Actual closure is handled off-platform and remains subject to separate contractual settlement.
+        Live client-facing monitoring dashboard for one fixed leveraged SOL long. This page shows the current trade situation only. Settlement and closure are handled separately under contract with CFG.
       </div>
       <div class="status-strip">
         <div class="status-box">
@@ -424,7 +414,7 @@
         <div class="panel-header">
           <div>
             <div class="panel-title">Client View</div>
-            <div class="panel-note">All close-related fees below are estimates based on current live position value and current settings. They are unrealized until contractual close.</div>
+            <div class="panel-note">Current live trade metrics only. Operational fee calculations and internal profitability remain in the hidden CFG section.</div>
           </div>
           <div id="clientPnLPill" class="pill amber">Monitoring</div>
         </div>
@@ -447,46 +437,42 @@
             <div class="metric-value neutral" id="currentPriceValue">—</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Quantity</div>
+            <div class="metric-label">Notional / Equity</div>
             <div class="metric-value neutral" id="quantityValue">—</div>
-            <div class="metric-sub">Fixed at trade inception unless manually adjusted.</div>
+            <div class="metric-sub">Displayed as current position value over current equity.</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Unrealized PnL</div>
             <div class="metric-value" id="unrealizedPnlValue">—</div>
-            <div class="metric-sub">Mark-to-market movement before estimated close-related fees.</div>
+            <div class="metric-sub">Live mark-to-market movement before any settlement-side calculations.</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Accrued Contractual Funding Charge</div>
-            <div class="metric-value neutral" id="contractFundingValue">—</div>
-            <div class="metric-sub">Accrued per Binance funding interval using current position value at each interval checkpoint.</div>
+            <div class="metric-label">Funding Charge / Interval</div>
+            <div class="metric-value neutral" id="clientFundingRateValue">0.05%</div>
+            <div class="metric-sub">Contractual rate per funding interval.</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Estimated Net Value If Closed Now</div>
+            <div class="metric-label">Estimated Equity If Closed Now</div>
             <div class="metric-value" id="estimatedNetValue">—</div>
-            <div class="metric-sub">Includes all current unrealized estimates displayed below.</div>
+            <div class="metric-sub">Estimated from equity basis, not current leveraged notional.</div>
           </div>
-        </div>
-
-        <div class="banner" id="closeNarrative">
-          If the position were closed now, the exit fee would apply on the current position value, the contractual funding charge would remain payable based on accrued funding intervals, and performance and cash-out fees would remain unrealized estimates until formal settlement.
         </div>
 
         <div class="actions">
           <button class="secondary" id="refreshBtn">Refresh Live Data</button>
-          <button class="gold" id="closePreviewBtn">Preview Close Calculation</button>
+          <button class="gold" id="closePreviewBtn">Preview Close Estimate</button>
         </div>
 
         <div class="footer-note">
-          Closure is not executed from this page. The client must sign a separate agreement with CFG to settle the position. This page is a live monitoring and calculation interface only.
+          This page does not execute the close. It is a live monitoring and estimate interface only.
         </div>
       </section>
 
       <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-title">Current Settlement Estimate</div>
-            <div class="panel-note">These values are updated from live price data and precise funding-interval records available to the page.</div>
+            <div class="panel-title">Current Trade Situation</div>
+            <div class="panel-note">Institutional live overview of the current leveraged SOL long.</div>
           </div>
         </div>
 
@@ -494,49 +480,41 @@
           <div class="row">
             <div class="row-left">
               <div class="row-title">Current Position Value</div>
-              <div class="row-desc">Quantity multiplied by the current live SOL price.</div>
+              <div class="row-desc">Current live leveraged notional based on quantity multiplied by the live SOL price.</div>
             </div>
             <div class="row-value" id="rowPositionValue">—</div>
           </div>
 
           <div class="row">
             <div class="row-left">
-              <div class="row-title">Estimated Exit Fee If Closed Now</div>
-              <div class="row-desc">Applied on current position value only at settlement. This is unrealized until close.</div>
+              <div class="row-title">Current Equity Estimate</div>
+              <div class="row-desc">Initial deposit plus unrealized PnL.</div>
             </div>
-            <div class="row-value" id="rowExitFee">—</div>
+            <div class="row-value" id="rowEquityValue">—</div>
           </div>
 
           <div class="row">
             <div class="row-left">
-              <div class="row-title">Estimated Performance Fee If Closed Now</div>
-              <div class="row-desc">Calculated independently from the unrealized profit basis selected in your configuration. It does not reduce or compound other fees.</div>
+              <div class="row-title">Trade Quantity</div>
+              <div class="row-desc">Underlying SOL quantity derived from initial notional divided by entry price.</div>
             </div>
-            <div class="row-value" id="rowPerformanceFee">—</div>
+            <div class="row-value" id="rowQuantity">—</div>
           </div>
 
           <div class="row">
             <div class="row-left">
-              <div class="row-title">Estimated Cash-out Fee If Closed Now</div>
-              <div class="row-desc">Applied as a separate unrealized charge on the selected value basis at close.</div>
+              <div class="row-title">Effective Notional</div>
+              <div class="row-desc">Initial deposit multiplied by leverage.</div>
             </div>
-            <div class="row-value" id="rowCashoutFee">—</div>
+            <div class="row-value" id="rowInitialNotional">—</div>
           </div>
 
           <div class="row">
             <div class="row-left">
-              <div class="row-title">Actual Binance Funding So Far</div>
-              <div class="row-desc">Summed from precise funding intervals using Binance funding history records and the app’s position size assumptions.</div>
+              <div class="row-title">Live Return on Equity</div>
+              <div class="row-desc">Unrealized PnL divided by initial deposit.</div>
             </div>
-            <div class="row-value" id="rowBinanceFunding">—</div>
-          </div>
-
-          <div class="row">
-            <div class="row-left">
-              <div class="row-title">Estimated Net Settlement Value</div>
-              <div class="row-desc">Current value plus unrealized PnL effects, less unrealized close estimates shown above. This is a live estimate only.</div>
-            </div>
-            <div class="row-value" id="rowNetSettlement">—</div>
+            <div class="row-value" id="rowRoe">—</div>
           </div>
         </div>
       </section>
@@ -546,7 +524,7 @@
       <div class="panel-header">
         <div>
           <div class="panel-title">Internal CFG View</div>
-          <div class="panel-note">Hidden operational section. Use this to edit trade inputs, view CFG revenue estimate, and generate a manual close calculation before you settle externally.</div>
+          <div class="panel-note">Operational fee calculations, internal profitability, editable trade controls, and GitHub commit controls.</div>
         </div>
         <div class="pill amber" id="adminState">Unlocked</div>
       </div>
@@ -562,6 +540,7 @@
               </div>
               <div class="row-value" id="intFundingRevenue">—</div>
             </div>
+
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Exit Revenue</div>
@@ -569,6 +548,7 @@
               </div>
               <div class="row-value" id="intExitRevenue">—</div>
             </div>
+
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Performance Revenue</div>
@@ -576,6 +556,7 @@
               </div>
               <div class="row-value" id="intPerformanceRevenue">—</div>
             </div>
+
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Cash-out Revenue</div>
@@ -583,6 +564,7 @@
               </div>
               <div class="row-value" id="intCashoutRevenue">—</div>
             </div>
+
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Actual Binance Funding Impact</div>
@@ -590,72 +572,126 @@
               </div>
               <div class="row-value" id="intBinanceCost">—</div>
             </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Estimated Client Equity If Closed Now</div>
+                <div class="row-desc">Equity basis after internal settlement-side estimates.</div>
+              </div>
+              <div class="row-value" id="intClientEquityAfterFees">—</div>
+            </div>
+
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated CFG Gross Profit</div>
-                <div class="row-desc">Contractual funding plus unrealized close fees, minus actual Binance funding impact. Entry fee is excluded by design.</div>
+                <div class="row-desc">Contractual funding plus unrealized close fees, minus actual Binance funding impact.</div>
               </div>
               <div class="row-value" id="intGrossProfit">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Accrued Contractual Funding Charge</div>
+                <div class="row-desc">Precise accumulated contractual funding charge across the funding intervals observed so far.</div>
+              </div>
+              <div class="row-value" id="adminAccruedFunding">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Estimated Exit Fee If Closed Now</div>
+                <div class="row-desc">Applied on current position value only at settlement.</div>
+              </div>
+              <div class="row-value" id="adminExitFee">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Estimated Performance Fee If Closed Now</div>
+                <div class="row-desc">Calculated independently from the configured profit basis. It does not reduce the base for other fees.</div>
+              </div>
+              <div class="row-value" id="adminPerformanceFee">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Estimated Cash-out Fee If Closed Now</div>
+                <div class="row-desc">Applied separately from the other fees based on the selected basis.</div>
+              </div>
+              <div class="row-value" id="adminCashoutFee">—</div>
             </div>
           </div>
 
           <div class="actions">
             <button id="saveConfigBtn">Save Settings</button>
+            <button id="commitConfigBtn" class="gold">Save & Commit to GitHub</button>
             <button class="secondary" id="lockAdminBtn">Lock Internal View</button>
           </div>
         </div>
 
         <div>
-          <div class="panel-title" style="font-size:16px; margin-bottom:12px;">Trade & Fee Controls</div>
+          <div class="panel-title" style="font-size:16px; margin-bottom:12px;">Trade, GitHub & Fee Controls</div>
           <div class="form-grid">
             <div class="field">
               <label for="tradeId">Trade Label</label>
               <input id="tradeId" type="text" />
             </div>
+
             <div class="field">
               <label for="symbol">Symbol</label>
               <input id="symbol" type="text" value="SOLUSDT" />
             </div>
+
             <div class="field">
               <label for="openTime">Trade Open Time (UTC)</label>
               <input id="openTime" type="datetime-local" />
             </div>
+
             <div class="field">
               <label for="entryPrice">Entry Price</label>
               <input id="entryPrice" type="number" step="0.0001" />
             </div>
+
             <div class="field">
               <label for="deposit">Initial Deposit</label>
               <input id="deposit" type="number" step="0.01" />
             </div>
+
             <div class="field">
               <label for="leverage">Leverage</label>
               <input id="leverage" type="number" step="0.01" />
             </div>
+
             <div class="field">
               <label for="maintenanceMargin">Maintenance Margin Rate</label>
               <input id="maintenanceMargin" type="number" step="0.0001" />
             </div>
+
             <div class="field">
               <label for="quantity">Quantity</label>
               <input id="quantity" type="number" step="0.00000001" />
             </div>
+
             <div class="field">
               <label for="contractFundingRate">Client Funding Charge / Interval</label>
               <input id="contractFundingRate" type="number" step="0.000001" />
             </div>
+
             <div class="field">
               <label for="exitFeeRate">Client Exit Fee Rate</label>
               <input id="exitFeeRate" type="number" step="0.000001" />
             </div>
+
             <div class="field">
               <label for="performanceFeeRate">Client Performance Fee Rate</label>
               <input id="performanceFeeRate" type="number" step="0.000001" />
             </div>
+
             <div class="field">
               <label for="cashoutFeeRate">Client Cash-out Fee Rate</label>
               <input id="cashoutFeeRate" type="number" step="0.000001" />
             </div>
+
             <div class="field">
               <label for="performanceBasis">Performance Fee Basis</label>
               <select id="performanceBasis">
@@ -663,6 +699,7 @@
                 <option value="position_value">Current position value</option>
               </select>
             </div>
+
             <div class="field">
               <label for="cashoutBasis">Cash-out Fee Basis</label>
               <select id="cashoutBasis">
@@ -670,9 +707,30 @@
                 <option value="deposit_plus_pnl">Deposit plus unrealized PnL</option>
               </select>
             </div>
+
             <div class="field wide">
               <label for="adminKey">Internal Unlock Key</label>
               <input id="adminKey" type="text" />
+            </div>
+
+            <div class="field">
+              <label for="ghOwner">GitHub Owner</label>
+              <input id="ghOwner" type="text" placeholder="your-github-username" />
+            </div>
+
+            <div class="field">
+              <label for="ghRepo">GitHub Repo</label>
+              <input id="ghRepo" type="text" placeholder="your-repo-name" />
+            </div>
+
+            <div class="field">
+              <label for="ghBranch">GitHub Branch</label>
+              <input id="ghBranch" type="text" value="main" />
+            </div>
+
+            <div class="field wide">
+              <label for="ghToken">GitHub Token</label>
+              <input id="ghToken" type="password" placeholder="Paste fine-grained PAT here only when committing" />
             </div>
           </div>
         </div>
@@ -697,44 +755,35 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'cfg-sol-monitor-config-v1';
+    const STORAGE_KEY = 'cfg-sol-monitor-config-v2';
     const ADMIN_SESSION_KEY = 'cfg-sol-monitor-admin-open';
 
-    const defaultConfig = {
-      tradeId: 'CFG SOL Long 001',
-      symbol: 'SOLUSDT',
-      openTime: '2026-03-24T12:00',
-      deposit: 7000,
-      leverage: 1.5,
-      entryPrice: 90,
-      maintenanceMargin: 0.005,
-      quantity: 116.66666667,
-      contractFundingRate: 0.0005,
-      exitFeeRate: 0.0155,
-      performanceFeeRate: 0.15,
-      cashoutFeeRate: 0.04,
-      performanceBasis: 'unrealized_pnl',
-      cashoutBasis: 'position_value',
-      adminKey: atob('Q0ZHLTg3MjEtWDlBLVBSSVZBVEU=')
-    };
-
-    let config = loadConfig();
+    let config = {};
     let runtime = {
       currentPrice: null,
       lastRefresh: null,
       fundingRates: [],
       fundingInfo: null,
       fundingAccrual: 0,
-      actualBinanceFunding: 0,
-      markHistory: []
+      actualBinanceFunding: 0
     };
 
-    function loadConfig() {
+    async function loadConfig() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? { ...defaultConfig, ...JSON.parse(raw) } : { ...defaultConfig };
+        const local = localStorage.getItem(STORAGE_KEY);
+        if (local) {
+          config = JSON.parse(local);
+          return;
+        }
+
+        const response = await fetch('./config.json', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Could not load config.json');
+        }
+        config = await response.json();
       } catch (error) {
-        return { ...defaultConfig };
+        console.error(error);
+        alert('Error loading config.json');
       }
     }
 
@@ -762,20 +811,14 @@
       return `${(Number(value || 0) * 100).toFixed(digits)}%`;
     }
 
-    function toUtcInputValue(localLikeString) {
-      return localLikeString || '';
-    }
-
     function fromLocalInputToUtcMs(value) {
       if (!value) return Date.now();
       const dt = new Date(value);
       return dt.getTime();
     }
 
-    function fundingIntervalsElapsed() {
-      if (!runtime.fundingRates.length) return 0;
-      const openMs = fromLocalInputToUtcMs(config.openTime);
-      return runtime.fundingRates.filter(item => Number(item.fundingTime) >= openMs).length;
+    function getInitialNotional() {
+      return config.deposit * config.leverage;
     }
 
     function getPositionValue(price) {
@@ -786,19 +829,25 @@
       return (price - config.entryPrice) * config.quantity;
     }
 
+    function getEquityValue(price) {
+      return config.deposit + getUnrealizedPnl(price);
+    }
+
     function getEstimatedExitFee(positionValue) {
       return positionValue * config.exitFeeRate;
     }
 
     function getEstimatedPerformanceFee(unrealizedPnl, positionValue) {
-      const basis = config.performanceBasis === 'position_value' ? positionValue : Math.max(unrealizedPnl, 0);
+      const basis = config.performanceBasis === 'position_value'
+        ? Math.max(positionValue, 0)
+        : Math.max(unrealizedPnl, 0);
       return basis * config.performanceFeeRate;
     }
 
     function getEstimatedCashoutFee(unrealizedPnl, positionValue) {
       const basis = config.cashoutBasis === 'deposit_plus_pnl'
         ? Math.max(config.deposit + unrealizedPnl, 0)
-        : positionValue;
+        : Math.max(positionValue, 0);
       return basis * config.cashoutFeeRate;
     }
 
@@ -830,17 +879,13 @@
       }
     }
 
-    function estimateCurrentPositionValueAtFunding(markPriceAtFunding, currentPrice) {
-      const px = Number(markPriceAtFunding || currentPrice || 0);
-      return getPositionValue(px);
-    }
-
     function computeFundingAccrual(currentPrice) {
       let contractFunding = 0;
       let actualBinanceFunding = 0;
 
       for (const item of runtime.fundingRates) {
-        const positionValueAtFunding = estimateCurrentPositionValueAtFunding(item.markPrice, currentPrice);
+        const markPriceAtFunding = Number(item.markPrice || currentPrice || 0);
+        const positionValueAtFunding = config.quantity * markPriceAtFunding;
         contractFunding += positionValueAtFunding * config.contractFundingRate;
         actualBinanceFunding += positionValueAtFunding * Number(item.fundingRate || 0);
       }
@@ -865,6 +910,7 @@
 
     function setValue(id, text, cls) {
       const el = document.getElementById(id);
+      if (!el) return;
       el.textContent = text;
       if (cls) {
         el.classList.remove('positive', 'negative', 'neutral');
@@ -876,10 +922,29 @@
       const price = runtime.currentPrice || 0;
       const positionValue = getPositionValue(price);
       const unrealizedPnl = getUnrealizedPnl(price);
+      const equityValue = getEquityValue(price);
+      const initialNotional = getInitialNotional();
+
       const estimatedExitFee = getEstimatedExitFee(positionValue);
       const estimatedPerformanceFee = getEstimatedPerformanceFee(unrealizedPnl, positionValue);
       const estimatedCashoutFee = getEstimatedCashoutFee(unrealizedPnl, positionValue);
-      const estimatedNetValue = positionValue - runtime.fundingAccrual - estimatedExitFee - estimatedPerformanceFee - estimatedCashoutFee;
+
+      const estimatedClientEquityAfterFees =
+        equityValue
+        - runtime.fundingAccrual
+        - estimatedExitFee
+        - estimatedPerformanceFee
+        - estimatedCashoutFee;
+
+      const internalProfit =
+        runtime.fundingAccrual
+        + estimatedExitFee
+        + estimatedPerformanceFee
+        + estimatedCashoutFee
+        - runtime.actualBinanceFunding;
+
+      const roe = config.deposit > 0 ? unrealizedPnl / config.deposit : 0;
+      const notionalOverEquity = equityValue > 0 ? positionValue / equityValue : 0;
 
       updateClientPill(unrealizedPnl);
 
@@ -891,28 +956,29 @@
       setValue('leverageValue', `${number(config.leverage, 2)}x`, 'neutral');
       setValue('entryPriceValue', money(config.entryPrice), 'neutral');
       setValue('currentPriceValue', money(price), 'neutral');
-      setValue('quantityValue', number(config.quantity, 6), 'neutral');
+      setValue('quantityValue', `${number(notionalOverEquity, 2)}x`, 'neutral');
       setValue('unrealizedPnlValue', money(unrealizedPnl), unrealizedPnl >= 0 ? 'positive' : 'negative');
-      setValue('contractFundingValue', money(runtime.fundingAccrual), 'neutral');
-      setValue('estimatedNetValue', money(estimatedNetValue), estimatedNetValue >= 0 ? 'positive' : 'negative');
+      setValue('clientFundingRateValue', percent(config.contractFundingRate), 'neutral');
+      setValue('estimatedNetValue', money(estimatedClientEquityAfterFees), estimatedClientEquityAfterFees >= 0 ? 'positive' : 'negative');
 
-      setValue('rowPositionValue', money(positionValue));
-      setValue('rowExitFee', `${money(estimatedExitFee)} · ${percent(config.exitFeeRate)}`);
-      setValue('rowPerformanceFee', `${money(estimatedPerformanceFee)} · ${percent(config.performanceFeeRate)}`);
-      setValue('rowCashoutFee', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`);
-      setValue('rowBinanceFunding', money(runtime.actualBinanceFunding), runtime.actualBinanceFunding <= 0 ? 'positive' : 'negative');
-      setValue('rowNetSettlement', money(estimatedNetValue), estimatedNetValue >= 0 ? 'positive' : 'negative');
+      setValue('rowPositionValue', money(positionValue), 'neutral');
+      setValue('rowEquityValue', money(equityValue), equityValue >= 0 ? 'positive' : 'negative');
+      setValue('rowQuantity', `${number(config.quantity, 6)} SOL`, 'neutral');
+      setValue('rowInitialNotional', money(initialNotional), 'neutral');
+      setValue('rowRoe', percent(roe), roe >= 0 ? 'positive' : 'negative');
 
-      const currentPositionLine = `If the position were closed now at approximately ${money(price)}, the estimated exit fee would be ${money(estimatedExitFee)}, the estimated performance fee would be ${money(estimatedPerformanceFee)}, and the estimated cash-out fee would be ${money(estimatedCashoutFee)}. These close-related amounts remain unrealized until formal settlement.`;
-      document.getElementById('closeNarrative').textContent = currentPositionLine;
-
-      setValue('intFundingRevenue', money(runtime.fundingAccrual));
-      setValue('intExitRevenue', money(estimatedExitFee));
-      setValue('intPerformanceRevenue', money(estimatedPerformanceFee));
-      setValue('intCashoutRevenue', money(estimatedCashoutFee));
+      setValue('intFundingRevenue', money(runtime.fundingAccrual), 'neutral');
+      setValue('intExitRevenue', `${money(estimatedExitFee)} · ${percent(config.exitFeeRate)}`, 'neutral');
+      setValue('intPerformanceRevenue', `${money(estimatedPerformanceFee)} · ${percent(config.performanceFeeRate)}`, 'neutral');
+      setValue('intCashoutRevenue', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`, 'neutral');
       setValue('intBinanceCost', money(runtime.actualBinanceFunding), runtime.actualBinanceFunding <= 0 ? 'positive' : 'negative');
-      const internalProfit = runtime.fundingAccrual + estimatedExitFee + estimatedPerformanceFee + estimatedCashoutFee - runtime.actualBinanceFunding;
+      setValue('intClientEquityAfterFees', money(estimatedClientEquityAfterFees), estimatedClientEquityAfterFees >= 0 ? 'positive' : 'negative');
       setValue('intGrossProfit', money(internalProfit), internalProfit >= 0 ? 'positive' : 'negative');
+
+      setValue('adminAccruedFunding', money(runtime.fundingAccrual), 'neutral');
+      setValue('adminExitFee', `${money(estimatedExitFee)} · ${percent(config.exitFeeRate)}`, 'neutral');
+      setValue('adminPerformanceFee', `${money(estimatedPerformanceFee)} · ${percent(config.performanceFeeRate)}`, 'neutral');
+      setValue('adminCashoutFee', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`, 'neutral');
     }
 
     function openAdminModal() {
@@ -936,27 +1002,30 @@
     }
 
     function bindForm() {
-      document.getElementById('tradeId').value = config.tradeId;
-      document.getElementById('symbol').value = config.symbol;
-      document.getElementById('openTime').value = toUtcInputValue(config.openTime);
-      document.getElementById('entryPrice').value = config.entryPrice;
-      document.getElementById('deposit').value = config.deposit;
-      document.getElementById('leverage').value = config.leverage;
-      document.getElementById('maintenanceMargin').value = config.maintenanceMargin;
-      document.getElementById('quantity').value = config.quantity;
-      document.getElementById('contractFundingRate').value = config.contractFundingRate;
-      document.getElementById('exitFeeRate').value = config.exitFeeRate;
-      document.getElementById('performanceFeeRate').value = config.performanceFeeRate;
-      document.getElementById('cashoutFeeRate').value = config.cashoutFeeRate;
-      document.getElementById('performanceBasis').value = config.performanceBasis;
-      document.getElementById('cashoutBasis').value = config.cashoutBasis;
-      document.getElementById('adminKey').value = config.adminKey;
+      document.getElementById('tradeId').value = config.tradeId || '';
+      document.getElementById('symbol').value = config.symbol || 'SOLUSDT';
+      document.getElementById('openTime').value = config.openTime || '';
+      document.getElementById('entryPrice').value = config.entryPrice || 0;
+      document.getElementById('deposit').value = config.deposit || 0;
+      document.getElementById('leverage').value = config.leverage || 0;
+      document.getElementById('maintenanceMargin').value = config.maintenanceMargin || 0;
+      document.getElementById('quantity').value = config.quantity || 0;
+      document.getElementById('contractFundingRate').value = config.contractFundingRate || 0;
+      document.getElementById('exitFeeRate').value = config.exitFeeRate || 0;
+      document.getElementById('performanceFeeRate').value = config.performanceFeeRate || 0;
+      document.getElementById('cashoutFeeRate').value = config.cashoutFeeRate || 0;
+      document.getElementById('performanceBasis').value = config.performanceBasis || 'unrealized_pnl';
+      document.getElementById('cashoutBasis').value = config.cashoutBasis || 'position_value';
+      document.getElementById('adminKey').value = config.adminKey || '';
+      document.getElementById('ghOwner').value = config.ghOwner || '';
+      document.getElementById('ghRepo').value = config.ghRepo || '';
+      document.getElementById('ghBranch').value = config.ghBranch || 'main';
     }
 
     function readFormIntoConfig() {
-      config.tradeId = document.getElementById('tradeId').value.trim() || defaultConfig.tradeId;
+      config.tradeId = document.getElementById('tradeId').value.trim();
       config.symbol = document.getElementById('symbol').value.trim().toUpperCase() || 'SOLUSDT';
-      config.openTime = document.getElementById('openTime').value || defaultConfig.openTime;
+      config.openTime = document.getElementById('openTime').value;
       config.entryPrice = Number(document.getElementById('entryPrice').value || 0);
       config.deposit = Number(document.getElementById('deposit').value || 0);
       config.leverage = Number(document.getElementById('leverage').value || 0);
@@ -968,23 +1037,30 @@
       config.cashoutFeeRate = Number(document.getElementById('cashoutFeeRate').value || 0);
       config.performanceBasis = document.getElementById('performanceBasis').value;
       config.cashoutBasis = document.getElementById('cashoutBasis').value;
-      config.adminKey = document.getElementById('adminKey').value || defaultConfig.adminKey;
+      config.adminKey = document.getElementById('adminKey').value;
+      config.ghOwner = document.getElementById('ghOwner').value.trim();
+      config.ghRepo = document.getElementById('ghRepo').value.trim();
+      config.ghBranch = document.getElementById('ghBranch').value.trim() || 'main';
     }
 
     async function refreshData() {
       try {
         document.getElementById('statusTrade').textContent = 'Refreshing';
+
         const [price, fundingRates, fundingInfo] = await Promise.all([
           fetchMarkPrice(),
           fetchFundingRates(),
           fetchFundingInfo()
         ]);
+
         runtime.currentPrice = price;
         runtime.fundingRates = fundingRates;
         runtime.fundingInfo = fundingInfo;
         runtime.lastRefresh = Date.now();
+
         computeFundingAccrual(price);
         render();
+
         document.getElementById('statusTrade').textContent = 'Monitoring Live';
       } catch (error) {
         document.getElementById('statusTrade').textContent = 'Live Feed Error';
@@ -992,17 +1068,94 @@
       }
     }
 
+    async function commitConfigToGitHub({ owner, repo, branch, token, configObject }) {
+      const path = 'config.json';
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+      const headers = {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      };
+
+      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, {
+        method: 'GET',
+        headers
+      });
+
+      if (!getRes.ok) {
+        const txt = await getRes.text();
+        throw new Error(`Could not read current config.json: ${txt}`);
+      }
+
+      const currentFile = await getRes.json();
+      const jsonText = JSON.stringify(configObject, null, 2);
+      const encodedContent = btoa(unescape(encodeURIComponent(jsonText)));
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          message: 'Update config.json from CFG admin panel',
+          content: encodedContent,
+          sha: currentFile.sha,
+          branch
+        })
+      });
+
+      if (!putRes.ok) {
+        const errText = await putRes.text();
+        throw new Error(`Commit failed: ${errText}`);
+      }
+
+      return await putRes.json();
+    }
+
     function initActions() {
       document.getElementById('refreshBtn').addEventListener('click', refreshData);
+
       document.getElementById('closePreviewBtn').addEventListener('click', () => {
-        alert('This page provides a live settlement estimate only. The position is closed manually on your exchange and settled contractually off-platform.');
+        alert('This page provides a live estimate only. The actual position is closed manually on your exchange and settled separately under contract.');
       });
+
       document.getElementById('saveConfigBtn').addEventListener('click', async () => {
         readFormIntoConfig();
         saveConfig();
         await refreshData();
-        alert('CFG settings saved on this browser.');
+        alert('Settings saved in this browser.');
       });
+
+      document.getElementById('commitConfigBtn').addEventListener('click', async () => {
+        try {
+          readFormIntoConfig();
+          saveConfig();
+
+          const owner = document.getElementById('ghOwner').value.trim();
+          const repo = document.getElementById('ghRepo').value.trim();
+          const branch = document.getElementById('ghBranch').value.trim() || 'main';
+          const token = document.getElementById('ghToken').value.trim();
+
+          if (!owner || !repo || !token) {
+            alert('Enter GitHub owner, repo, and token.');
+            return;
+          }
+
+          await commitConfigToGitHub({
+            owner,
+            repo,
+            branch,
+            token,
+            configObject: config
+          });
+
+          alert('config.json committed to GitHub successfully.');
+          await refreshData();
+        } catch (error) {
+          console.error(error);
+          alert(error.message || 'GitHub commit failed.');
+        }
+      });
+
       document.getElementById('lockAdminBtn').addEventListener('click', lockAdmin);
       document.getElementById('keySubmitBtn').addEventListener('click', () => {
         const key = document.getElementById('keyInput').value;
@@ -1013,11 +1166,14 @@
           alert('Incorrect key.');
         }
       });
+
       document.getElementById('keyCancelBtn').addEventListener('click', closeAdminModal);
       document.getElementById('hiddenTrigger').addEventListener('click', openAdminModal);
+
       document.getElementById('keyModal').addEventListener('click', (event) => {
         if (event.target.id === 'keyModal') closeAdminModal();
       });
+
       document.addEventListener('keydown', (event) => {
         if (event.shiftKey && event.key.toLowerCase() === 'g') {
           openAdminModal();
@@ -1026,11 +1182,14 @@
     }
 
     async function init() {
+      await loadConfig();
       bindForm();
       initActions();
+
       if (localStorage.getItem(ADMIN_SESSION_KEY) === 'open') {
         unlockAdmin();
       }
+
       await refreshData();
       setInterval(refreshData, 60000);
     }
