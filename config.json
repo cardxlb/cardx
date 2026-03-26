@@ -5,11 +5,9 @@
   "deposit": 7000,
   "leverage": 1.5,
   "entryPrice": 90,
-  "maintenanceMargin": 0.005,
   "quantity": 116.66666667,
 
   "contractFundingRate": 0.0005,
-
   "exitFeeRate": 0.0155,
   "performanceFeeRate": 0.15,
   "cashoutFeeRate": 0.04,
@@ -17,5 +15,14 @@
   "performanceBasis": "unrealized_pnl",
   "cashoutBasis": "position_value",
 
-  "adminKey": "FG-8721-X9A-PRIVATE"
+  "adminKey": "FG-8721-X9A-PRIVATE",
+
+  "ghOwner": "YOUR_USERNAME",
+  "ghRepo": "YOUR_REPO",
+  "ghBranch": "main",
+
+  "emailEnabled": false,
+  "emailjs_publicKey": "",
+  "emailjs_serviceId": "",
+  "emailjs_templateId": ""
 }
