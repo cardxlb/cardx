@@ -140,6 +140,11 @@
       color: var(--navy);
     }
 
+    .small-title {
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
     .panel-note {
       font-size: 12px;
       color: var(--muted);
@@ -387,8 +392,10 @@
       <div class="eyebrow">Chatila Financial Group</div>
       <h1>Institutional SOL Position Monitor</h1>
       <div class="sub">
-        Live client-facing monitoring dashboard for one fixed leveraged SOL long. This page shows the current trade situation only. Settlement and closure are handled separately under contract with CFG.
+        Live client-facing monitoring dashboard for one fixed leveraged SOL long.
+        This page shows the current trade situation only. Settlement and closure are handled separately under contract with CFG.
       </div>
+
       <div class="status-strip">
         <div class="status-box">
           <div class="status-label">Trade Status</div>
@@ -414,7 +421,9 @@
         <div class="panel-header">
           <div>
             <div class="panel-title">Client View</div>
-            <div class="panel-note">Current live trade metrics only. Operational fee calculations and internal profitability remain in the hidden CFG section.</div>
+            <div class="panel-note">
+              Current live trade metrics only. Operational fee calculations and internal profitability remain in the hidden CFG section.
+            </div>
           </div>
           <div id="clientPnLPill" class="pill amber">Monitoring</div>
         </div>
@@ -424,33 +433,40 @@
             <div class="metric-label">Initial Deposit</div>
             <div class="metric-value neutral" id="depositValue">—</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Leverage</div>
             <div class="metric-value neutral" id="leverageValue">—</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Entry Price</div>
             <div class="metric-value neutral" id="entryPriceValue">—</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Current Price</div>
             <div class="metric-value neutral" id="currentPriceValue">—</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Notional / Equity</div>
             <div class="metric-value neutral" id="quantityValue">—</div>
             <div class="metric-sub">Displayed as current position value over current equity.</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Unrealized PnL</div>
             <div class="metric-value" id="unrealizedPnlValue">—</div>
             <div class="metric-sub">Live mark-to-market movement before any settlement-side calculations.</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Funding Charge / Interval</div>
             <div class="metric-value neutral" id="clientFundingRateValue">0.05%</div>
             <div class="metric-sub">Contractual rate per funding interval.</div>
           </div>
+
           <div class="metric-card">
             <div class="metric-label">Estimated Equity If Closed Now</div>
             <div class="metric-value" id="estimatedNetValue">—</div>
@@ -531,7 +547,8 @@
 
       <div class="admin-grid">
         <div>
-          <div class="panel-title" style="font-size:16px; margin-bottom:12px;">Internal Revenue Snapshot</div>
+          <div class="panel-title small-title">Internal Revenue Snapshot</div>
+
           <div class="list">
             <div class="row">
               <div class="row-left">
@@ -608,7 +625,7 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Performance Fee If Closed Now</div>
-                <div class="row-desc">Calculated independently from the configured profit basis. It does not reduce the base for other fees.</div>
+                <div class="row-desc">Calculated independently from the configured profit basis.</div>
               </div>
               <div class="row-value" id="adminPerformanceFee">—</div>
             </div>
@@ -623,15 +640,17 @@
           </div>
 
           <div class="actions">
-            <button id="saveConfigBtn">Save Settings</button>
-            <button id="commitConfigBtn" class="gold">Save & Commit to GitHub</button>
+            <button id="saveConfigBtn" class="gold">Save Changes</button>
             <button class="secondary" id="lockAdminBtn">Lock Internal View</button>
           </div>
+
+          <div class="footer-note" id="dirtyStateText">No unsaved admin changes.</div>
         </div>
 
         <div>
-          <div class="panel-title" style="font-size:16px; margin-bottom:12px;">Trade, GitHub & Fee Controls</div>
-          <div class="form-grid">
+          <div class="panel-title small-title">Trade, GitHub & Fee Controls</div>
+
+          <div class="form-grid" id="adminForm">
             <div class="field">
               <label for="tradeId">Trade Label</label>
               <input id="tradeId" type="text" />
@@ -730,7 +749,7 @@
 
             <div class="field wide">
               <label for="ghToken">GitHub Token</label>
-              <input id="ghToken" type="password" placeholder="Paste fine-grained PAT here only when committing" />
+              <input id="ghToken" type="password" placeholder="Paste fine-grained PAT here when saving" />
             </div>
           </div>
         </div>
@@ -743,7 +762,7 @@
   <div class="key-modal" id="keyModal">
     <div class="key-card">
       <h2>Internal CFG Access</h2>
-      <p>Enter the internal key to unlock the hidden CFG section on this page. This is intended for operational use only.</p>
+      <p>Enter the internal key to unlock the hidden CFG section on this page.</p>
       <div class="key-row">
         <input id="keyInput" type="password" placeholder="Enter internal key" />
         <button id="keySubmitBtn">Unlock</button>
@@ -755,10 +774,12 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'cfg-sol-monitor-config-v2';
+    const STORAGE_KEY = 'cfg-sol-monitor-config-v4';
     const ADMIN_SESSION_KEY = 'cfg-sol-monitor-admin-open';
 
     let config = {};
+    let isDirty = false;
+
     let runtime = {
       currentPrice: null,
       lastRefresh: null,
@@ -787,7 +808,7 @@
       }
     }
 
-    function saveConfig() {
+    function saveConfigLocal() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     }
 
@@ -813,8 +834,7 @@
 
     function fromLocalInputToUtcMs(value) {
       if (!value) return Date.now();
-      const dt = new Date(value);
-      return dt.getTime();
+      return new Date(value).getTime();
     }
 
     function getInitialNotional() {
@@ -841,6 +861,7 @@
       const basis = config.performanceBasis === 'position_value'
         ? Math.max(positionValue, 0)
         : Math.max(unrealizedPnl, 0);
+
       return basis * config.performanceFeeRate;
     }
 
@@ -848,6 +869,7 @@
       const basis = config.cashoutBasis === 'deposit_plus_pnl'
         ? Math.max(config.deposit + unrealizedPnl, 0)
         : Math.max(positionValue, 0);
+
       return basis * config.cashoutFeeRate;
     }
 
@@ -981,6 +1003,18 @@
       setValue('adminCashoutFee', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`, 'neutral');
     }
 
+    function markDirty(state = true) {
+      isDirty = state;
+      const el = document.getElementById('dirtyStateText');
+      if (!el) return;
+
+      if (isDirty) {
+        el.textContent = 'Admin form changed. Press Save Changes to commit config.json to GitHub.';
+      } else {
+        el.textContent = 'No unsaved admin changes.';
+      }
+    }
+
     function openAdminModal() {
       document.getElementById('keyModal').classList.add('open');
       document.getElementById('keyInput').value = '';
@@ -1111,6 +1145,17 @@
       return await putRes.json();
     }
 
+    function watchAdminFields() {
+      const form = document.getElementById('adminForm');
+      if (!form) return;
+
+      const fields = form.querySelectorAll('input, select');
+      fields.forEach((field) => {
+        field.addEventListener('input', () => markDirty(true));
+        field.addEventListener('change', () => markDirty(true));
+      });
+    }
+
     function initActions() {
       document.getElementById('refreshBtn').addEventListener('click', refreshData);
 
@@ -1119,16 +1164,9 @@
       });
 
       document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-        readFormIntoConfig();
-        saveConfig();
-        await refreshData();
-        alert('Settings saved in this browser.');
-      });
-
-      document.getElementById('commitConfigBtn').addEventListener('click', async () => {
         try {
           readFormIntoConfig();
-          saveConfig();
+          saveConfigLocal();
 
           const owner = document.getElementById('ghOwner').value.trim();
           const repo = document.getElementById('ghRepo').value.trim();
@@ -1148,7 +1186,8 @@
             configObject: config
           });
 
-          alert('config.json committed to GitHub successfully.');
+          markDirty(false);
+          alert('Changes saved and committed to GitHub successfully.');
           await refreshData();
         } catch (error) {
           console.error(error);
@@ -1157,6 +1196,7 @@
       });
 
       document.getElementById('lockAdminBtn').addEventListener('click', lockAdmin);
+
       document.getElementById('keySubmitBtn').addEventListener('click', () => {
         const key = document.getElementById('keyInput').value;
         if (key === config.adminKey) {
@@ -1185,11 +1225,13 @@
       await loadConfig();
       bindForm();
       initActions();
+      watchAdminFields();
 
       if (localStorage.getItem(ADMIN_SESSION_KEY) === 'open') {
         unlockAdmin();
       }
 
+      markDirty(false);
       await refreshData();
       setInterval(refreshData, 60000);
     }
