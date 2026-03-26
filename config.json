@@ -24,7 +24,7 @@
 
   "overridePrice": "",
 
-  "emailEnabled": false,
+  "emailEnabled": true,
   "emailjs_publicKey": "",
   "emailjs_serviceId": "",
   "emailjs_templateId": ""
