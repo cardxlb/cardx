@@ -5,6 +5,7 @@
   "deposit": 7000,
   "leverage": 1.5,
   "entryPrice": 90,
+  "maintenanceMargin": 0.005,
   "quantity": 116.66666667,
 
   "contractFundingRate": 0.0005,
@@ -17,9 +18,11 @@
 
   "adminKey": "FG-8721-X9A-PRIVATE",
 
-  "ghOwner": "YOUR_USERNAME",
-  "ghRepo": "YOUR_REPO",
+  "ghOwner": "YOUR_GITHUB_USERNAME",
+  "ghRepo": "YOUR_GITHUB_REPO",
   "ghBranch": "main",
+
+  "overridePrice": "",
 
   "emailEnabled": false,
   "emailjs_publicKey": "",
