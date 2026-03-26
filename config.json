@@ -18,8 +18,8 @@
 
   "adminKey": "FG-8721-X9A-PRIVATE",
 
-  "ghOwner": "YOUR_GITHUB_USERNAME",
-  "ghRepo": "YOUR_GITHUB_REPO",
+  "ghOwner": "cardxlb",
+  "ghRepo": "cardx",
   "ghBranch": "main",
 
   "overridePrice": "",
