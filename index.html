@@ -789,6 +789,7 @@
 
           <div class="actions">
             <button id="saveConfigBtn" class="gold">Save Changes</button>
+            <button id="openPositionBtn">Open New Position</button>
             <button id="closePositionBtn">Close Current Position</button>
             <button id="generateInvoiceBtn">Generate PDF Invoice</button>
             <button id="testEmailBtn">Test Email</button>
@@ -974,6 +975,7 @@
     let isDirty = false;
     let saveQueue = Promise.resolve();
     let timelineChart = null;
+
     let syncState = {
       state: 'Idle',
       lastCommitAt: '',
@@ -994,6 +996,10 @@
       lastComputed: {},
       latestFundingRate: 0
     };
+
+    function requestMadePopup(message) {
+      alert(message || 'Request has been made.');
+    }
 
     function setSyncState(partial) {
       syncState = { ...syncState, ...partial };
@@ -1082,6 +1088,22 @@
     function fromLocalInputToUtcMs(value) {
       if (!value) return Date.now();
       return new Date(value).getTime();
+    }
+
+    function ensureTradeStatus() {
+      if (!config.tradeStatus) config.tradeStatus = 'open';
+    }
+
+    function setTradeOpenState() {
+      config.tradeStatus = 'open';
+      config.closedAt = '';
+      config.closePrice = '';
+    }
+
+    function setTradeClosedState(price) {
+      config.tradeStatus = 'closed';
+      config.closedAt = new Date().toISOString();
+      config.closePrice = price;
     }
 
     function getInitialNotional() {
@@ -1335,7 +1357,9 @@
             unsavedEvents: 0,
             lastError: ''
           });
-          hideAdminBanner();
+          if (!document.getElementById('adminBanner').classList.contains('red')) {
+            hideAdminBanner();
+          }
           return result;
         })
         .catch(error => {
@@ -1349,25 +1373,45 @@
       return saveQueue;
     }
 
-    async function saveConfigAndCommit() {
+    async function saveConfigAndCommit(showPopup = false) {
       readFormIntoConfig();
+      ensureTradeStatus();
       saveConfigLocal();
       await commitJsonFile('config.json', config, 'Update config.json from CFG admin panel');
       markDirty(false);
+
+      if (showPopup) {
+        requestMadePopup('Save changes request has been made.');
+      }
     }
 
     async function maybeSendEmail(subject, message) {
-      if (!config.emailEnabled || !config.emailjs_publicKey || !config.emailjs_serviceId || !config.emailjs_templateId) return;
-      try {
-        emailjs.init({ publicKey: config.emailjs_publicKey });
-        await emailjs.send(config.emailjs_serviceId, config.emailjs_templateId, {
-          subject,
-          message,
-          to_email: 'mahmoudchatila974@gmail.com'
-        });
-      } catch (error) {
-        console.error('Email send failed', error);
+      if (
+        !config.emailEnabled ||
+        !config.emailjs_publicKey ||
+        !config.emailjs_serviceId ||
+        !config.emailjs_templateId
+      ) {
+        throw new Error('Email is not fully configured in config.json');
       }
+
+      emailjs.init({ publicKey: config.emailjs_publicKey });
+
+      return await emailjs.send(
+        config.emailjs_serviceId,
+        config.emailjs_templateId,
+        {
+          to_email: 'mahmoudchatila974@gmail.com',
+          subject: subject,
+          message: message,
+          trade_id: config.tradeId || '',
+          symbol: config.symbol || '',
+          current_price: String(runtime.currentPrice || ''),
+          close_price: String(config.closePrice || ''),
+          status: String(config.tradeStatus || 'open'),
+          timestamp: new Date().toISOString()
+        }
+      );
     }
 
     async function showBrowserNotification(title, body) {
@@ -1548,7 +1592,7 @@
         banner.classList.add('red');
         banner.textContent = lines.join(' ');
 
-        adminBanner.classList.remove('hidden');
+        adminBanner.classList.remove('hidden', 'green');
         adminBanner.classList.add('red');
         adminBanner.textContent = lines.join(' ');
 
@@ -1569,12 +1613,17 @@
           setSyncState({ unsavedEvents: syncState.unsavedEvents });
           await queueHistoryCommit('Save live liquidation event');
           await showBrowserNotification('CFG Liquidation Alert', lines.join(' '));
-          await maybeSendEmail('CFG Liquidation Alert', lines.join(' '));
+          try {
+            await maybeSendEmail('CFG Liquidation Alert', lines.join(' '));
+          } catch (error) {
+            console.error(error);
+            showAdminBanner(`Liquidation email failed: ${error.message || 'Unknown error'}`, 'red');
+          }
         }
       } else {
         banner.classList.add('hidden');
         banner.textContent = '';
-        if (!adminBanner.classList.contains('green')) {
+        if (adminBanner.classList.contains('red')) {
           adminBanner.classList.add('hidden');
           adminBanner.classList.remove('red');
           adminBanner.textContent = '';
@@ -1887,38 +1936,36 @@
       config.overridePrice = document.getElementById('overridePrice').value.trim();
     }
 
-    async function refreshData() {
+    async function openNewPosition() {
       try {
-        document.getElementById('statusTrade').textContent = 'Refreshing';
+        readFormIntoConfig();
+        setTradeOpenState();
 
-        const [livePrice, fundingInfo] = await Promise.all([
-          fetchMarkPrice(),
-          fetchFundingInfo()
-        ]);
+        const inserted = addEventIfMissing(`open_${config.tradeId}_${Date.now()}`, {
+          type: 'open_event',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          openedAt: new Date().toISOString(),
+          entryPrice: Number(config.entryPrice || 0),
+          deposit: Number(config.deposit || 0),
+          leverage: Number(config.leverage || 0),
+          quantity: Number(config.quantity || 0)
+        });
 
-        runtime.livePrice = livePrice;
-        runtime.fundingInfo = fundingInfo;
-        runtime.lastRefresh = Date.now();
+        if (inserted) {
+          syncState.unsavedEvents += 1;
+          setSyncState({ unsavedEvents: syncState.unsavedEvents });
+        }
 
-        const source = getCurrentPriceSource();
-        runtime.currentPrice = source.price;
+        await saveConfigAndCommit(false);
+        await queueHistoryCommit('Save open position event');
+        await refreshData();
 
-        await processPriceSnapshots();
-        await processFundingPeriods(runtime.currentPrice);
-        computeFundingAccrualFromHistory();
-
-        runtime.customerLiq = getCustomerLiquidationPrice();
-        runtime.binanceLiq = getBinanceLiquidationEstimate();
-
-        await rebuildMissedLiquidationsFromSnapshots();
-        render();
-        await checkLiquidationAndPersist();
-
-        document.getElementById('statusTrade').textContent = config.tradeStatus === 'closed' ? 'Closed' : 'Monitoring Live';
+        requestMadePopup('Open new position request has been made.');
+        showAdminBanner('Trade has been set to OPEN and saved successfully.', 'green');
       } catch (error) {
-        document.getElementById('statusTrade').textContent = 'Live Feed Error';
         console.error(error);
-        showAdminBanner(`Refresh failed: ${error.message || 'Unknown error'}`, 'red');
+        showAdminBanner(error.message || 'Failed to open new position.', 'red');
       }
     }
 
@@ -2011,49 +2058,73 @@
 
     async function closeCurrentPosition() {
       const c = runtime.lastComputed;
+
       if (!c || !Object.keys(c).length) {
         alert('No current settlement data available.');
         return;
       }
 
-      config.tradeStatus = 'closed';
-      config.closedAt = new Date().toISOString();
-      config.closePrice = c.price;
+      try {
+        setTradeClosedState(c.price);
 
-      const inserted = addEventIfMissing(`close_${config.tradeId}_${Date.now()}`, {
-        type: 'close_event',
-        tradeId: config.tradeId,
-        symbol: config.symbol,
-        closedAt: config.closedAt,
-        closePrice: c.price,
-        finalClientPayout: c.estimatedClientEquityAfterFees,
-        estimatedCfgProfit: c.internalProfit,
-        customerLiquidationPrice: runtime.customerLiq,
-        binanceLiquidationPrice: runtime.binanceLiq
-      });
+        const inserted = addEventIfMissing(`close_${config.tradeId}_${Date.now()}`, {
+          type: 'close_event',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          closedAt: config.closedAt,
+          closePrice: c.price,
+          finalClientPayout: c.estimatedClientEquityAfterFees,
+          estimatedCfgProfit: c.internalProfit,
+          customerLiquidationPrice: runtime.customerLiq,
+          binanceLiquidationPrice: runtime.binanceLiq
+        });
 
-      if (inserted) {
-        syncState.unsavedEvents += 1;
+        if (inserted) {
+          syncState.unsavedEvents += 1;
+          setSyncState({ unsavedEvents: syncState.unsavedEvents });
+        }
+
+        await saveConfigAndCommit(false);
+        await queueHistoryCommit('Save close event');
+        await generateInvoicePdf(false);
+
+        try {
+          await maybeSendEmail(
+            'CFG Position Closed',
+            `Trade ${config.tradeId} has been marked closed at ${money(c.price)}. Final client payout estimate: ${money(c.estimatedClientEquityAfterFees)}.`
+          );
+        } catch (error) {
+          console.error(error);
+          showAdminBanner(`Close email failed: ${error.message || 'Unknown error'}`, 'red');
+        }
+
+        await refreshData();
+
+        requestMadePopup('Close current position request has been made.');
+        showAdminBanner('Position marked closed, invoice generated, and close data saved.', 'green');
+      } catch (error) {
+        console.error(error);
+        showAdminBanner(error.message || 'Failed to close position.', 'red');
       }
-
-      await saveConfigAndCommit();
-      await queueHistoryCommit('Save close event');
-      await generateInvoicePdf(false);
-      await maybeSendEmail(
-        'CFG Position Closed',
-        `Trade ${config.tradeId} has been marked closed at ${money(c.price)}. Final client payout estimate: ${money(c.estimatedClientEquityAfterFees)}.`
-      );
-      await refreshData();
-      showAdminBanner('Position marked closed, invoice generated, and close data saved.', 'green');
     }
 
     async function testEmail() {
       try {
-        await maybeSendEmail('CFG Test Email', 'This is a test email from the CFG SOL Position Monitor.');
-        showAdminBanner('Test email sent attempt completed.', 'green');
+        await maybeSendEmail(
+          'CFG Test Email',
+          `This is a test email from the CFG SOL Position Monitor.
+Trade: ${config.tradeId || ''}
+Symbol: ${config.symbol || ''}
+Current Price: ${money(runtime.currentPrice || 0)}
+Status: ${config.tradeStatus || 'open'}`
+        );
+
+        requestMadePopup('Test email request has been made.');
+        showAdminBanner('Test email sent successfully.', 'green');
       } catch (error) {
         console.error(error);
-        showAdminBanner('Test email failed.', 'red');
+        requestMadePopup('Test email request has been made, but it failed.');
+        showAdminBanner(`Test email failed: ${error.message || 'Unknown error'}`, 'red');
       }
     }
 
@@ -2082,7 +2153,7 @@
 
       document.getElementById('saveConfigBtn').addEventListener('click', async () => {
         try {
-          await saveConfigAndCommit();
+          await saveConfigAndCommit(true);
           showAdminBanner('Changes saved and committed to GitHub successfully.', 'green');
           await refreshData();
         } catch (error) {
@@ -2091,6 +2162,7 @@
         }
       });
 
+      document.getElementById('openPositionBtn').addEventListener('click', openNewPosition);
       document.getElementById('generateInvoiceBtn').addEventListener('click', () => generateInvoicePdf(true));
       document.getElementById('closePositionBtn').addEventListener('click', closeCurrentPosition);
       document.getElementById('testEmailBtn').addEventListener('click', testEmail);
@@ -2120,8 +2192,45 @@
       });
     }
 
+    async function refreshData() {
+      try {
+        document.getElementById('statusTrade').textContent = 'Refreshing';
+
+        const [livePrice, fundingInfo] = await Promise.all([
+          fetchMarkPrice(),
+          fetchFundingInfo()
+        ]);
+
+        runtime.livePrice = livePrice;
+        runtime.fundingInfo = fundingInfo;
+        runtime.lastRefresh = Date.now();
+
+        const source = getCurrentPriceSource();
+        runtime.currentPrice = source.price;
+
+        await processPriceSnapshots();
+        await processFundingPeriods(runtime.currentPrice);
+        computeFundingAccrualFromHistory();
+
+        runtime.customerLiq = getCustomerLiquidationPrice();
+        runtime.binanceLiq = getBinanceLiquidationEstimate();
+
+        await rebuildMissedLiquidationsFromSnapshots();
+        render();
+        await checkLiquidationAndPersist();
+
+        document.getElementById('statusTrade').textContent =
+          config.tradeStatus === 'closed' ? 'Closed' : 'Monitoring Live';
+      } catch (error) {
+        document.getElementById('statusTrade').textContent = 'Live Feed Error';
+        console.error(error);
+        showAdminBanner(`Refresh failed: ${error.message || 'Unknown error'}`, 'red');
+      }
+    }
+
     async function init() {
       await loadConfig();
+      ensureTradeStatus();
       await loadHistory();
       initializeHistoryIfNeeded();
       bindForm();
