@@ -7,23 +7,17 @@
   "entryPrice": 90,
   "maintenanceMargin": 0.005,
   "quantity": 116.66666667,
-
   "contractFundingRate": 0.0005,
   "exitFeeRate": 0.0155,
   "performanceFeeRate": 0.15,
   "cashoutFeeRate": 0.04,
-
   "performanceBasis": "unrealized_pnl",
   "cashoutBasis": "position_value",
-
   "adminKey": "FG-8721-X9A-PRIVATE",
-
   "ghOwner": "cardxlb",
   "ghRepo": "cardx",
   "ghBranch": "main",
-
   "overridePrice": "",
-
   "emailEnabled": true,
   "emailjs_publicKey": "ZsowT__1MEjOCJQns",
   "emailjs_serviceId": "service_rdxi4r9",
