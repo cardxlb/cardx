@@ -21,5 +21,8 @@
   "emailEnabled": true,
   "emailjs_publicKey": "ZsowT__1MEjOCJQns",
   "emailjs_serviceId": "service_rdxi4r9",
-  "emailjs_templateId": "template_ylp28ru"
+  "emailjs_templateId": "template_ylp28ru",
+  "tradeStatus": "closed",
+  "closedAt": "2026-03-27T08:54:11.319Z",
+  "closePrice": 85.07144957
 }
