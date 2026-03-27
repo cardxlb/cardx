@@ -1303,29 +1303,38 @@
       };
     }
 
-    async function commitJsonFile(path, dataObject, message) {
-      const token = document.getElementById('ghToken').value.trim() || getSavedToken();
-      if (!token) throw new Error('GitHub token is required.');
+async function commitJsonFile(path, dataObject, message, maxRetries = 2) {
+  const token = document.getElementById('ghToken').value.trim() || getSavedToken();
+  if (!token) throw new Error('GitHub token is required.');
 
-      const owner = config.ghOwner;
-      const repo = config.ghRepo;
-      const branch = config.ghBranch || 'main';
+  const owner = config.ghOwner;
+  const repo = config.ghRepo;
+  const branch = config.ghBranch || 'main';
 
-      if (!owner || !repo) throw new Error('ghOwner and ghRepo must be defined in config.json');
+  if (!owner || !repo) throw new Error('ghOwner and ghRepo must be defined in config.json');
 
-      saveTokenLocal(token);
+  saveTokenLocal(token);
 
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-      const headers = getGitHubHeaders(token);
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const headers = getGitHubHeaders(token);
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
 
-      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { method: 'GET', headers });
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, {
+        method: 'GET',
+        headers,
+        cache: 'no-store'
+      });
+
       if (!getRes.ok) {
         const err = await getRes.text();
         throw new Error(`Could not read ${path}: ${err}`);
       }
 
       const currentFile = await getRes.json();
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
 
       const putRes = await fetch(apiUrl, {
         method: 'PUT',
@@ -1338,40 +1347,56 @@
         })
       });
 
-      if (!putRes.ok) {
-        const err = await putRes.text();
-        throw new Error(`Commit failed for ${path}: ${err}`);
+      if (putRes.ok) {
+        return await putRes.json();
       }
 
-      return await putRes.json();
-    }
+      const errText = await putRes.text();
 
-    async function queueHistoryCommit(message) {
-      setSyncState({ state: 'Pending' });
-      saveQueue = saveQueue
-        .then(async () => {
-          const result = await commitJsonFile('history.json', historyData, message);
-          setSyncState({
-            state: 'Synced',
-            lastCommitAt: new Date().toLocaleString(),
-            unsavedEvents: 0,
-            lastError: ''
-          });
-          if (!document.getElementById('adminBanner').classList.contains('red')) {
-            hideAdminBanner();
-          }
-          return result;
-        })
-        .catch(error => {
-          console.error(error);
-          setSyncState({
-            state: 'Commit Failed',
-            lastError: error.message || 'Unknown error'
-          });
-          showAdminBanner(`History sync failed: ${error.message || 'Unknown error'}`, 'red');
-        });
-      return saveQueue;
+      if (putRes.status === 409) {
+        lastError = new Error(`Commit conflict on ${path}, retrying with latest SHA...`);
+        continue;
+      }
+
+      throw new Error(`Commit failed for ${path}: ${errText}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxRetries) break;
     }
+  }
+
+  throw new Error(lastError?.message || `Commit failed for ${path}`);
+}
+
+async function queueHistoryCommit(message) {
+  setSyncState({ state: 'Pending' });
+
+  saveQueue = saveQueue
+    .then(async () => {
+      const result = await commitJsonFile('history.json', historyData, message, 3);
+      setSyncState({
+        state: 'Synced',
+        lastCommitAt: new Date().toLocaleString(),
+        unsavedEvents: 0,
+        lastError: ''
+      });
+      if (!document.getElementById('adminBanner').classList.contains('red')) {
+        hideAdminBanner();
+      }
+      return result;
+    })
+    .catch(error => {
+      console.error(error);
+      setSyncState({
+        state: 'Commit Failed',
+        lastError: error.message || 'Unknown error'
+      });
+      showAdminBanner(`History sync failed: ${error.message || 'Unknown error'}`, 'red');
+      throw error;
+    });
+
+  return saveQueue;
+}
 
     async function saveConfigAndCommit(showPopup = false) {
       readFormIntoConfig();
@@ -1385,34 +1410,30 @@
       }
     }
 
-    async function maybeSendEmail(subject, message) {
-      if (
-        !config.emailEnabled ||
-        !config.emailjs_publicKey ||
-        !config.emailjs_serviceId ||
-        !config.emailjs_templateId
-      ) {
-        throw new Error('Email is not fully configured in config.json');
-      }
+async function maybeSendEmail(subject, message) {
+  if (
+    !config.emailEnabled ||
+    !config.emailjs_publicKey ||
+    !config.emailjs_serviceId ||
+    !config.emailjs_templateId
+  ) {
+    throw new Error('Email is not fully configured in config.json');
+  }
 
-      emailjs.init({ publicKey: config.emailjs_publicKey });
+  emailjs.init({
+    publicKey: config.emailjs_publicKey
+  });
 
-      return await emailjs.send(
-        config.emailjs_serviceId,
-        config.emailjs_templateId,
-        {
-          to_email: 'mahmoudchatila974@gmail.com',
-          subject: subject,
-          message: message,
-          trade_id: config.tradeId || '',
-          symbol: config.symbol || '',
-          current_price: String(runtime.currentPrice || ''),
-          close_price: String(config.closePrice || ''),
-          status: String(config.tradeStatus || 'open'),
-          timestamp: new Date().toISOString()
-        }
-      );
+  return await emailjs.send(
+    config.emailjs_serviceId,
+    config.emailjs_templateId,
+    {
+      to_email: 'mahmoudchatila974@gmail.com',
+      subject: subject,
+      message: message
     }
+  );
+}
 
     async function showBrowserNotification(title, body) {
       if (!('Notification' in window)) return;
@@ -2108,25 +2129,30 @@
       }
     }
 
-    async function testEmail() {
-      try {
-        await maybeSendEmail(
-          'CFG Test Email',
-          `This is a test email from the CFG SOL Position Monitor.
-Trade: ${config.tradeId || ''}
-Symbol: ${config.symbol || ''}
-Current Price: ${money(runtime.currentPrice || 0)}
-Status: ${config.tradeStatus || 'open'}`
-        );
+<script>
+async function testEmail() {
+  try {
+    const response = await maybeSendEmail(
+      'CFG Test Email',
+      'This is a test email from the CFG SOL Position Monitor.'
+    );
 
-        requestMadePopup('Test email request has been made.');
-        showAdminBanner('Test email sent successfully.', 'green');
-      } catch (error) {
-        console.error(error);
-        requestMadePopup('Test email request has been made, but it failed.');
-        showAdminBanner(`Test email failed: ${error.message || 'Unknown error'}`, 'red');
-      }
-    }
+    requestMadePopup('Test email request has been made.');
+    showAdminBanner(`Test email sent successfully. Status: ${response.status} ${response.text}`, 'green');
+  } catch (error) {
+    console.error('EMAIL ERROR:', error);
+
+    const msg =
+      error?.text ||
+      error?.message ||
+      JSON.stringify(error) ||
+      'Unknown EmailJS error';
+
+    requestMadePopup('Test email request has been made, but it failed.');
+    showAdminBanner(`Test email failed: ${msg}`, 'red');
+  }
+}
+</script>
 
     function watchAdminFields() {
       const form = document.getElementById('adminForm');
