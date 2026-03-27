@@ -1,7 +1,7 @@
 [
   {
     "id": "6ad9c596-e2c6-497d-9fbf-05a019873562",
-    "created_at": "2026-03-27T14:08:58.241Z",
+    "created_at": "2026-03-27T14:09:08.574Z",
     "owner": "cardxlb",
     "repo": "cardx",
     "branch": "main",
@@ -30,7 +30,8 @@
     "has_photo": false,
     "slug": "serena_samaha",
     "manual_slug": "",
-    "_source": "manual_save"
+    "_has_html": true,
+    "_source": "uploaded"
   },
   {
     "id": "6b0be81f-da96-4e14-8727-c4bb561e3b27",
