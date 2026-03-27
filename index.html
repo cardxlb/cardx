@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CFG SOL Position Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
     :root {
       --bg: #eef2f7;
@@ -34,7 +36,7 @@
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1500px;
       margin: 0 auto;
       padding: 24px;
     }
@@ -218,7 +220,7 @@
     .row:last-child { border-bottom: 0; }
 
     .row-left {
-      max-width: 68%;
+      max-width: 70%;
     }
 
     .row-title {
@@ -369,6 +371,82 @@
       z-index: 1;
     }
 
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: auto;
+      background: white;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f7f9fc;
+      color: var(--navy);
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .banner {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fbfcfe;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .banner.red {
+      background: rgba(180, 35, 24, 0.10);
+      border-color: rgba(180, 35, 24, 0.25);
+      color: var(--red);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      font-size: 13px;
+    }
+
+    .muted-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     @media (max-width: 1024px) {
       .grid, .admin-grid { grid-template-columns: 1fr; }
       .status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -378,7 +456,7 @@
       .container { padding: 14px; }
       .topbar { padding: 22px 18px; border-radius: 20px; }
       h1 { font-size: 26px; }
-      .status-strip, .metrics, .form-grid { grid-template-columns: 1fr; }
+      .status-strip, .metrics, .form-grid, .checkbox-grid { grid-template-columns: 1fr; }
       .row { flex-direction: column; }
       .row-left { max-width: 100%; }
       .row-value { text-align: left; white-space: normal; }
@@ -458,7 +536,7 @@
           <div class="metric-card">
             <div class="metric-label">Unrealized PnL</div>
             <div class="metric-value" id="unrealizedPnlValue">—</div>
-            <div class="metric-sub">Live mark-to-market movement before any settlement-side calculations.</div>
+            <div class="metric-sub">Live mark-to-market movement before internal settlement calculations.</div>
           </div>
 
           <div class="metric-card">
@@ -468,19 +546,18 @@
           </div>
 
           <div class="metric-card">
-            <div class="metric-label">Estimated Equity If Closed Now</div>
-            <div class="metric-value" id="estimatedNetValue">—</div>
-            <div class="metric-sub">Estimated from equity basis, not current leveraged notional.</div>
+            <div class="metric-label">Customer Liquidation Price</div>
+            <div class="metric-value negative" id="customerLiqValue">—</div>
+            <div class="metric-sub">Contractual customer-side liquidation threshold.</div>
           </div>
         </div>
 
         <div class="actions">
           <button class="secondary" id="refreshBtn">Refresh Live Data</button>
-          <button class="gold" id="closePreviewBtn">Preview Close Estimate</button>
         </div>
 
         <div class="footer-note">
-          This page does not execute the close. It is a live monitoring and estimate interface only.
+          This page does not execute the close. It is a live monitoring interface only.
         </div>
       </section>
 
@@ -496,7 +573,7 @@
           <div class="row">
             <div class="row-left">
               <div class="row-title">Current Position Value</div>
-              <div class="row-desc">Current live leveraged notional based on quantity multiplied by the live SOL price.</div>
+              <div class="row-desc">Current live leveraged notional based on quantity multiplied by the current SOL price.</div>
             </div>
             <div class="row-value" id="rowPositionValue">—</div>
           </div>
@@ -533,6 +610,8 @@
             <div class="row-value" id="rowRoe">—</div>
           </div>
         </div>
+
+        <div id="liquidationBanner" class="banner hidden"></div>
       </section>
     </div>
 
@@ -540,7 +619,7 @@
       <div class="panel-header">
         <div>
           <div class="panel-title">Internal CFG View</div>
-          <div class="panel-note">Operational fee calculations, internal profitability, editable trade controls, and GitHub commit controls.</div>
+          <div class="panel-note">Operational fee calculations, internal profitability, backlog recovery, liquidation monitoring, settlement preview, and invoice generation.</div>
         </div>
         <div class="pill amber" id="adminState">Unlocked</div>
       </div>
@@ -560,40 +639,32 @@
 
             <div class="row">
               <div class="row-left">
-                <div class="row-title">Estimated Exit Revenue</div>
-                <div class="row-desc">Estimated unrealized exit fee if closed now.</div>
-              </div>
-              <div class="row-value" id="intExitRevenue">—</div>
-            </div>
-
-            <div class="row">
-              <div class="row-left">
-                <div class="row-title">Estimated Performance Revenue</div>
-                <div class="row-desc">Estimated unrealized performance fee if closed now.</div>
-              </div>
-              <div class="row-value" id="intPerformanceRevenue">—</div>
-            </div>
-
-            <div class="row">
-              <div class="row-left">
-                <div class="row-title">Estimated Cash-out Revenue</div>
-                <div class="row-desc">Estimated unrealized cash-out fee if closed now.</div>
-              </div>
-              <div class="row-value" id="intCashoutRevenue">—</div>
-            </div>
-
-            <div class="row">
-              <div class="row-left">
                 <div class="row-title">Actual Binance Funding Impact</div>
-                <div class="row-desc">Actual exchange funding estimate to offset against your contractual economics.</div>
+                <div class="row-desc">Actual exchange funding accumulated across saved funding periods.</div>
               </div>
               <div class="row-value" id="intBinanceCost">—</div>
             </div>
 
             <div class="row">
               <div class="row-left">
+                <div class="row-title">Estimated Revenue Next Funding Period (8h)</div>
+                <div class="row-desc">Current contractual 0.05% charge minus estimated Binance funding using the latest known funding rate.</div>
+              </div>
+              <div class="row-value" id="nextFundingRevenue">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
+                <div class="row-title">Binance Liquidation Estimate</div>
+                <div class="row-desc">Exchange-side estimate using equity, Binance funding, and maintenance margin.</div>
+              </div>
+              <div class="row-value" id="binanceLiqValue">—</div>
+            </div>
+
+            <div class="row">
+              <div class="row-left">
                 <div class="row-title">Estimated Client Equity If Closed Now</div>
-                <div class="row-desc">Equity basis after internal settlement-side estimates.</div>
+                <div class="row-desc">Equity basis after selected settlement-side charges.</div>
               </div>
               <div class="row-value" id="intClientEquityAfterFees">—</div>
             </div>
@@ -601,15 +672,26 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated CFG Gross Profit</div>
-                <div class="row-desc">Contractual funding plus unrealized close fees, minus actual Binance funding impact.</div>
+                <div class="row-desc">Selected customer-side fees plus contractual funding minus Binance funding impact.</div>
               </div>
               <div class="row-value" id="intGrossProfit">—</div>
             </div>
+          </div>
 
+          <div class="panel-title small-title" style="margin-top:18px;">Settlement Fee Toggles</div>
+          <div class="checkbox-grid">
+            <label class="check"><input type="checkbox" id="applyFunding" checked> Apply contractual funding</label>
+            <label class="check"><input type="checkbox" id="applyExitFee" checked> Apply exit fee</label>
+            <label class="check"><input type="checkbox" id="applyPerformanceFee" checked> Apply performance fee</label>
+            <label class="check"><input type="checkbox" id="applyCashoutFee" checked> Apply cash-out fee</label>
+          </div>
+
+          <div class="panel-title small-title" style="margin-top:18px;">Settlement Preview</div>
+          <div class="list">
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Accrued Contractual Funding Charge</div>
-                <div class="row-desc">Precise accumulated contractual funding charge across the funding intervals observed so far.</div>
+                <div class="row-desc">Precise accumulated contractual funding charge across saved funding intervals.</div>
               </div>
               <div class="row-value" id="adminAccruedFunding">—</div>
             </div>
@@ -617,7 +699,7 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Exit Fee If Closed Now</div>
-                <div class="row-desc">Applied on current position value only at settlement.</div>
+                <div class="row-desc">Applied on current position value only if enabled.</div>
               </div>
               <div class="row-value" id="adminExitFee">—</div>
             </div>
@@ -625,7 +707,7 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Performance Fee If Closed Now</div>
-                <div class="row-desc">Calculated independently from the configured profit basis.</div>
+                <div class="row-desc">Calculated independently from the configured basis if enabled.</div>
               </div>
               <div class="row-value" id="adminPerformanceFee">—</div>
             </div>
@@ -633,7 +715,7 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Cash-out Fee If Closed Now</div>
-                <div class="row-desc">Applied separately from the other fees based on the selected basis.</div>
+                <div class="row-desc">Applied separately if enabled.</div>
               </div>
               <div class="row-value" id="adminCashoutFee">—</div>
             </div>
@@ -641,6 +723,9 @@
 
           <div class="actions">
             <button id="saveConfigBtn" class="gold">Save Changes</button>
+            <button id="closePositionBtn">Close Current Position</button>
+            <button id="generateInvoiceBtn">Generate PDF Invoice</button>
+            <button id="testEmailBtn">Test Email</button>
             <button class="secondary" id="lockAdminBtn">Lock Internal View</button>
           </div>
 
@@ -648,7 +733,7 @@
         </div>
 
         <div>
-          <div class="panel-title small-title">Trade, GitHub & Fee Controls</div>
+          <div class="panel-title small-title">Trade Controls</div>
 
           <div class="form-grid" id="adminForm">
             <div class="field">
@@ -727,31 +812,66 @@
               </select>
             </div>
 
+            <div class="field">
+              <label for="overridePrice">Override Current SOL Price</label>
+              <input id="overridePrice" type="number" step="0.0001" placeholder="leave blank for live price" />
+            </div>
+
+            <div class="field">
+              <label for="ghToken">GitHub Token</label>
+              <input id="ghToken" type="password" placeholder="saved locally after first successful save" />
+            </div>
+
             <div class="field wide">
               <label for="adminKey">Internal Unlock Key</label>
               <input id="adminKey" type="text" />
             </div>
-
-            <div class="field">
-              <label for="ghOwner">GitHub Owner</label>
-              <input id="ghOwner" type="text" placeholder="your-github-username" />
-            </div>
-
-            <div class="field">
-              <label for="ghRepo">GitHub Repo</label>
-              <input id="ghRepo" type="text" placeholder="your-repo-name" />
-            </div>
-
-            <div class="field">
-              <label for="ghBranch">GitHub Branch</label>
-              <input id="ghBranch" type="text" value="main" />
-            </div>
-
-            <div class="field wide">
-              <label for="ghToken">GitHub Token</label>
-              <input id="ghToken" type="password" placeholder="Paste fine-grained PAT here when saving" />
-            </div>
           </div>
+
+          <div class="muted-note">
+            GitHub owner, repo, and branch are read automatically from <code>config.json</code>.
+          </div>
+
+          <div class="panel-title small-title" style="margin-top:18px;">Funding Period History</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Funding Time</th>
+                  <th>Binance Rate</th>
+                  <th>Mark Price</th>
+                  <th>Position Value</th>
+                  <th>Binance Funding</th>
+                  <th>Contract Funding</th>
+                  <th>Cum. Binance</th>
+                  <th>Cum. Contract</th>
+                </tr>
+              </thead>
+              <tbody id="fundingTableBody">
+                <tr><td colspan="8">No funding history saved yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel-title small-title" style="margin-top:18px;">Recent 5-Min Price Snapshots</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Open Time</th>
+                  <th>Open</th>
+                  <th>High</th>
+                  <th>Low</th>
+                  <th>Close</th>
+                </tr>
+              </thead>
+              <tbody id="snapshotTableBody">
+                <tr><td colspan="5">No price snapshot history saved yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="adminBanner" class="banner hidden"></div>
         </div>
       </div>
     </section>
@@ -774,42 +894,69 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'cfg-sol-monitor-config-v4';
+    const STORAGE_KEY = 'cfg-sol-monitor-config-v6';
     const ADMIN_SESSION_KEY = 'cfg-sol-monitor-admin-open';
+    const GH_TOKEN_STORAGE_KEY = 'cfg-sol-monitor-gh-token-v1';
 
     let config = {};
+    let historyData = { events: [] };
     let isDirty = false;
+    let saveQueue = Promise.resolve();
 
     let runtime = {
+      livePrice: null,
       currentPrice: null,
       lastRefresh: null,
       fundingRates: [],
       fundingInfo: null,
       fundingAccrual: 0,
-      actualBinanceFunding: 0
+      actualBinanceFunding: 0,
+      customerLiq: null,
+      binanceLiq: null,
+      lastComputed: {},
+      latestFundingRate: 0
     };
 
     async function loadConfig() {
       try {
-        const local = localStorage.getItem(STORAGE_KEY);
-        if (local) {
-          config = JSON.parse(local);
-          return;
-        }
-
         const response = await fetch('./config.json', { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error('Could not load config.json');
-        }
-        config = await response.json();
+        if (!response.ok) throw new Error('Could not load config.json');
+        const fileConfig = await response.json();
+
+        const local = localStorage.getItem(STORAGE_KEY);
+        const localConfig = local ? JSON.parse(local) : {};
+
+        config = { ...fileConfig, ...localConfig };
       } catch (error) {
         console.error(error);
         alert('Error loading config.json');
       }
     }
 
+    async function loadHistory() {
+      try {
+        const response = await fetch('./history.json', { cache: 'no-store' });
+        if (!response.ok) {
+          historyData = { events: [] };
+          return;
+        }
+        historyData = await response.json();
+        if (!historyData.events) historyData.events = [];
+      } catch {
+        historyData = { events: [] };
+      }
+    }
+
     function saveConfigLocal() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    }
+
+    function saveTokenLocal(token) {
+      localStorage.setItem(GH_TOKEN_STORAGE_KEY, token);
+    }
+
+    function getSavedToken() {
+      return localStorage.getItem(GH_TOKEN_STORAGE_KEY) || '';
     }
 
     function money(value, digits = 2) {
@@ -828,7 +975,7 @@
       }).format(Number(value || 0));
     }
 
-    function percent(value, digits = 2) {
+    function percent(value, digits = 4) {
       return `${(Number(value || 0) * 100).toFixed(digits)}%`;
     }
 
@@ -838,39 +985,64 @@
     }
 
     function getInitialNotional() {
-      return config.deposit * config.leverage;
+      return Number(config.deposit || 0) * Number(config.leverage || 0);
     }
 
     function getPositionValue(price) {
-      return config.quantity * price;
+      return Number(config.quantity || 0) * Number(price || 0);
     }
 
     function getUnrealizedPnl(price) {
-      return (price - config.entryPrice) * config.quantity;
+      return (Number(price || 0) - Number(config.entryPrice || 0)) * Number(config.quantity || 0);
     }
 
     function getEquityValue(price) {
-      return config.deposit + getUnrealizedPnl(price);
+      return Number(config.deposit || 0) + getUnrealizedPnl(price);
     }
 
     function getEstimatedExitFee(positionValue) {
-      return positionValue * config.exitFeeRate;
+      return positionValue * Number(config.exitFeeRate || 0);
     }
 
     function getEstimatedPerformanceFee(unrealizedPnl, positionValue) {
       const basis = config.performanceBasis === 'position_value'
         ? Math.max(positionValue, 0)
         : Math.max(unrealizedPnl, 0);
-
-      return basis * config.performanceFeeRate;
+      return basis * Number(config.performanceFeeRate || 0);
     }
 
     function getEstimatedCashoutFee(unrealizedPnl, positionValue) {
       const basis = config.cashoutBasis === 'deposit_plus_pnl'
-        ? Math.max(config.deposit + unrealizedPnl, 0)
+        ? Math.max(Number(config.deposit || 0) + unrealizedPnl, 0)
         : Math.max(positionValue, 0);
+      return basis * Number(config.cashoutFeeRate || 0);
+    }
 
-      return basis * config.cashoutFeeRate;
+    function getCustomerLiquidationPrice() {
+      const q = Number(config.quantity || 0);
+      const entry = Number(config.entryPrice || 0);
+      const deposit = Number(config.deposit || 0);
+      const contractFunding = Number(runtime.fundingAccrual || 0);
+      if (!q || !entry) return 0;
+      const price = (q * entry + contractFunding - deposit) / q;
+      return Math.max(price, 0);
+    }
+
+    function getBinanceLiquidationEstimate() {
+      const q = Number(config.quantity || 0);
+      const entry = Number(config.entryPrice || 0);
+      const deposit = Number(config.deposit || 0);
+      const mmr = Number(config.maintenanceMargin || 0);
+      const actualFunding = Number(runtime.actualBinanceFunding || 0);
+      if (!q || !entry || (1 - mmr) <= 0) return 0;
+      const price = ((q * entry) + actualFunding - deposit) / (q * (1 - mmr));
+      return Math.max(price, 0);
+    }
+
+    function getCurrentPriceSource() {
+      const override = Number(document.getElementById('overridePrice')?.value || 0);
+      if (override > 0) return { price: override, source: 'override' };
+      return { price: runtime.livePrice || 0, source: 'live' };
     }
 
     async function fetchMarkPrice() {
@@ -878,11 +1050,12 @@
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Could not fetch mark price');
       const data = await response.json();
+      runtime.latestFundingRate = Number(data.lastFundingRate || 0);
       return Number(data.markPrice || data.indexPrice || 0);
     }
 
-    async function fetchFundingRates() {
-      const openMs = fromLocalInputToUtcMs(config.openTime);
+    async function fetchFundingRates(startTime) {
+      const openMs = startTime || fromLocalInputToUtcMs(config.openTime);
       const now = Date.now();
       const url = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${encodeURIComponent(config.symbol)}&startTime=${openMs}&endTime=${now}&limit=1000`;
       const response = await fetch(url, { cache: 'no-store' });
@@ -895,25 +1068,151 @@
       try {
         const response = await fetch(`https://fapi.binance.com/fapi/v1/fundingInfo?symbol=${encodeURIComponent(config.symbol)}`, { cache: 'no-store' });
         if (!response.ok) return null;
-        return await response.json();
+        const data = await response.json();
+        return Array.isArray(data) ? data[0] || null : data;
       } catch {
         return null;
       }
     }
 
-    function computeFundingAccrual(currentPrice) {
-      let contractFunding = 0;
-      let actualBinanceFunding = 0;
+    async function fetchMarkPriceKlines(startTime) {
+      const now = Date.now();
+      const url = `https://fapi.binance.com/fapi/v1/markPriceKlines?symbol=${encodeURIComponent(config.symbol)}&interval=5m&startTime=${startTime}&endTime=${now}&limit=1000`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Could not fetch mark price klines');
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    }
 
-      for (const item of runtime.fundingRates) {
-        const markPriceAtFunding = Number(item.markPrice || currentPrice || 0);
-        const positionValueAtFunding = config.quantity * markPriceAtFunding;
-        contractFunding += positionValueAtFunding * config.contractFundingRate;
-        actualBinanceFunding += positionValueAtFunding * Number(item.fundingRate || 0);
+    function getFundingEvents() {
+      return historyData.events.filter(e => e.type === 'funding_period').sort((a, b) => a.fundingTime - b.fundingTime);
+    }
+
+    function getSnapshotEvents() {
+      return historyData.events.filter(e => e.type === 'price_snapshot_5m').sort((a, b) => a.openTime - b.openTime);
+    }
+
+    function getLatestFundingTimeSaved() {
+      const fundingEvents = getFundingEvents();
+      return fundingEvents.length ? Number(fundingEvents[fundingEvents.length - 1].fundingTime) : 0;
+    }
+
+    function getLatestSnapshotTimeSaved() {
+      const snapshots = getSnapshotEvents();
+      return snapshots.length ? Number(snapshots[snapshots.length - 1].openTime) : 0;
+    }
+
+    function addEventIfMissing(eventKey, eventObject) {
+      const exists = historyData.events.some(e => e.eventKey === eventKey);
+      if (!exists) historyData.events.push({ ...eventObject, eventKey });
+      return !exists;
+    }
+
+    function computeFundingAccrualFromHistory() {
+      const fundingEvents = getFundingEvents();
+      runtime.fundingAccrual = fundingEvents.reduce((sum, e) => sum + Number(e.contractFundingCharge || 0), 0);
+      runtime.actualBinanceFunding = fundingEvents.reduce((sum, e) => sum + Number(e.binanceFundingAmount || 0), 0);
+    }
+
+    async function queueHistoryCommit(message) {
+      saveQueue = saveQueue.then(() => commitJsonFile('history.json', historyData, message)).catch(console.error);
+      return saveQueue;
+    }
+
+    async function processFundingPeriods(currentPrice) {
+      const lastSavedFundingTime = getLatestFundingTimeSaved();
+      const startTime = lastSavedFundingTime ? lastSavedFundingTime + 1 : fromLocalInputToUtcMs(config.openTime);
+      runtime.fundingRates = await fetchFundingRates(startTime);
+
+      let cumulativeContract = 0;
+      let cumulativeBinance = 0;
+      const existing = getFundingEvents();
+      if (existing.length) {
+        cumulativeContract = Number(existing[existing.length - 1].cumulativeContractFunding || 0);
+        cumulativeBinance = Number(existing[existing.length - 1].cumulativeBinanceFunding || 0);
       }
 
-      runtime.fundingAccrual = contractFunding;
-      runtime.actualBinanceFunding = actualBinanceFunding;
+      let changed = false;
+
+      for (const item of runtime.fundingRates) {
+        const fundingTime = Number(item.fundingTime || 0);
+        if (!fundingTime) continue;
+
+        const fundingMarkPrice = Number(item.markPrice || currentPrice || 0);
+        const positionValueAtFunding = Number(config.quantity || 0) * fundingMarkPrice;
+        const binanceFundingAmount = positionValueAtFunding * Number(item.fundingRate || 0);
+        const contractFundingCharge = positionValueAtFunding * Number(config.contractFundingRate || 0);
+
+        cumulativeContract += contractFundingCharge;
+        cumulativeBinance += binanceFundingAmount;
+
+        const event = {
+          type: 'funding_period',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          fundingTime,
+          fundingTimeIso: new Date(fundingTime).toISOString(),
+          fundingRate: Number(item.fundingRate || 0),
+          markPrice: fundingMarkPrice,
+          quantity: Number(config.quantity || 0),
+          positionValueAtFunding,
+          contractFundingRate: Number(config.contractFundingRate || 0),
+          contractFundingCharge,
+          binanceFundingAmount,
+          cumulativeContractFunding: cumulativeContract,
+          cumulativeBinanceFunding: cumulativeBinance,
+          savedAt: new Date().toISOString()
+        };
+
+        const inserted = addEventIfMissing(`funding_${config.symbol}_${fundingTime}`, event);
+        if (inserted) changed = true;
+      }
+
+      computeFundingAccrualFromHistory();
+
+      if (changed) {
+        await queueHistoryCommit('Save funding period history');
+      }
+    }
+
+    async function processPriceSnapshots() {
+      const lastSavedSnapshot = getLatestSnapshotTimeSaved();
+      const startTime = lastSavedSnapshot ? lastSavedSnapshot + 1 : fromLocalInputToUtcMs(config.openTime);
+      const klines = await fetchMarkPriceKlines(startTime);
+
+      let changed = false;
+
+      for (const k of klines) {
+        const openTime = Number(k[0]);
+        const closeTime = Number(k[6]);
+        const event = {
+          type: 'price_snapshot_5m',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          openTime,
+          openTimeIso: new Date(openTime).toISOString(),
+          closeTime,
+          closeTimeIso: new Date(closeTime).toISOString(),
+          open: Number(k[1]),
+          high: Number(k[2]),
+          low: Number(k[3]),
+          close: Number(k[4]),
+          savedAt: new Date().toISOString()
+        };
+        const inserted = addEventIfMissing(`price_5m_${config.symbol}_${openTime}`, event);
+        if (inserted) changed = true;
+      }
+
+      if (changed) {
+        addEventIfMissing(`backfill_${Date.now()}`, {
+          type: 'backfill_run',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          recoveredAt: new Date().toISOString(),
+          note: 'Recovered 5-minute price backlog and/or funding backlog after reopening.'
+        });
+        await queueHistoryCommit('Save 5-minute snapshot history');
+      }
     }
 
     function updateClientPill(unrealizedPnl) {
@@ -940,6 +1239,51 @@
       }
     }
 
+    function getToggle(id) {
+      return document.getElementById(id)?.checked ?? true;
+    }
+
+    function renderFundingTable() {
+      const tbody = document.getElementById('fundingTableBody');
+      const events = getFundingEvents();
+      if (!events.length) {
+        tbody.innerHTML = `<tr><td colspan="8">No funding history saved yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = events.slice(-50).map(e => `
+        <tr>
+          <td>${e.fundingTimeIso}</td>
+          <td>${percent(e.fundingRate, 4)}</td>
+          <td>${money(e.markPrice)}</td>
+          <td>${money(e.positionValueAtFunding)}</td>
+          <td>${money(e.binanceFundingAmount)}</td>
+          <td>${money(e.contractFundingCharge)}</td>
+          <td>${money(e.cumulativeBinanceFunding)}</td>
+          <td>${money(e.cumulativeContractFunding)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderSnapshotTable() {
+      const tbody = document.getElementById('snapshotTableBody');
+      const events = getSnapshotEvents();
+      if (!events.length) {
+        tbody.innerHTML = `<tr><td colspan="5">No price snapshot history saved yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = events.slice(-50).map(e => `
+        <tr>
+          <td>${e.openTimeIso}</td>
+          <td>${money(e.open)}</td>
+          <td>${money(e.high)}</td>
+          <td>${money(e.low)}</td>
+          <td>${money(e.close)}</td>
+        </tr>
+      `).join('');
+    }
+
     function render() {
       const price = runtime.currentPrice || 0;
       const positionValue = getPositionValue(price);
@@ -947,26 +1291,60 @@
       const equityValue = getEquityValue(price);
       const initialNotional = getInitialNotional();
 
-      const estimatedExitFee = getEstimatedExitFee(positionValue);
-      const estimatedPerformanceFee = getEstimatedPerformanceFee(unrealizedPnl, positionValue);
-      const estimatedCashoutFee = getEstimatedCashoutFee(unrealizedPnl, positionValue);
+      const rawFunding = runtime.fundingAccrual;
+      const rawExitFee = getEstimatedExitFee(positionValue);
+      const rawPerformanceFee = getEstimatedPerformanceFee(unrealizedPnl, positionValue);
+      const rawCashoutFee = getEstimatedCashoutFee(unrealizedPnl, positionValue);
+
+      runtime.customerLiq = getCustomerLiquidationPrice();
+      runtime.binanceLiq = getBinanceLiquidationEstimate();
+
+      const appliedFunding = getToggle('applyFunding') ? rawFunding : 0;
+      const appliedExitFee = getToggle('applyExitFee') ? rawExitFee : 0;
+      const appliedPerformanceFee = getToggle('applyPerformanceFee') ? rawPerformanceFee : 0;
+      const appliedCashoutFee = getToggle('applyCashoutFee') ? rawCashoutFee : 0;
 
       const estimatedClientEquityAfterFees =
         equityValue
-        - runtime.fundingAccrual
-        - estimatedExitFee
-        - estimatedPerformanceFee
-        - estimatedCashoutFee;
+        - appliedFunding
+        - appliedExitFee
+        - appliedPerformanceFee
+        - appliedCashoutFee;
 
       const internalProfit =
-        runtime.fundingAccrual
-        + estimatedExitFee
-        + estimatedPerformanceFee
-        + estimatedCashoutFee
+        appliedFunding
+        + appliedExitFee
+        + appliedPerformanceFee
+        + appliedCashoutFee
         - runtime.actualBinanceFunding;
 
-      const roe = config.deposit > 0 ? unrealizedPnl / config.deposit : 0;
+      const roe = Number(config.deposit || 0) > 0 ? unrealizedPnl / Number(config.deposit || 0) : 0;
       const notionalOverEquity = equityValue > 0 ? positionValue / equityValue : 0;
+
+      const nextContractFunding = positionValue * Number(config.contractFundingRate || 0);
+      const nextEstimatedBinanceFunding = positionValue * Number(runtime.latestFundingRate || 0);
+      const nextEstimatedRevenue = nextContractFunding - nextEstimatedBinanceFunding;
+
+      runtime.lastComputed = {
+        price,
+        positionValue,
+        unrealizedPnl,
+        equityValue,
+        initialNotional,
+        rawFunding,
+        rawExitFee,
+        rawPerformanceFee,
+        rawCashoutFee,
+        appliedFunding,
+        appliedExitFee,
+        appliedPerformanceFee,
+        appliedCashoutFee,
+        estimatedClientEquityAfterFees,
+        internalProfit,
+        nextContractFunding,
+        nextEstimatedBinanceFunding,
+        nextEstimatedRevenue
+      };
 
       updateClientPill(unrealizedPnl);
 
@@ -980,39 +1358,38 @@
       setValue('currentPriceValue', money(price), 'neutral');
       setValue('quantityValue', `${number(notionalOverEquity, 2)}x`, 'neutral');
       setValue('unrealizedPnlValue', money(unrealizedPnl), unrealizedPnl >= 0 ? 'positive' : 'negative');
-      setValue('clientFundingRateValue', percent(config.contractFundingRate), 'neutral');
-      setValue('estimatedNetValue', money(estimatedClientEquityAfterFees), estimatedClientEquityAfterFees >= 0 ? 'positive' : 'negative');
+      setValue('clientFundingRateValue', percent(config.contractFundingRate, 2), 'neutral');
+      setValue('customerLiqValue', money(runtime.customerLiq), 'negative');
 
       setValue('rowPositionValue', money(positionValue), 'neutral');
       setValue('rowEquityValue', money(equityValue), equityValue >= 0 ? 'positive' : 'negative');
       setValue('rowQuantity', `${number(config.quantity, 6)} SOL`, 'neutral');
       setValue('rowInitialNotional', money(initialNotional), 'neutral');
-      setValue('rowRoe', percent(roe), roe >= 0 ? 'positive' : 'negative');
+      setValue('rowRoe', percent(roe, 2), roe >= 0 ? 'positive' : 'negative');
 
-      setValue('intFundingRevenue', money(runtime.fundingAccrual), 'neutral');
-      setValue('intExitRevenue', `${money(estimatedExitFee)} · ${percent(config.exitFeeRate)}`, 'neutral');
-      setValue('intPerformanceRevenue', `${money(estimatedPerformanceFee)} · ${percent(config.performanceFeeRate)}`, 'neutral');
-      setValue('intCashoutRevenue', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`, 'neutral');
+      setValue('intFundingRevenue', money(rawFunding), 'neutral');
       setValue('intBinanceCost', money(runtime.actualBinanceFunding), runtime.actualBinanceFunding <= 0 ? 'positive' : 'negative');
+      setValue('nextFundingRevenue', `${money(nextEstimatedRevenue)} · gross ${money(nextContractFunding)} / est. Binance ${money(nextEstimatedBinanceFunding)}`, nextEstimatedRevenue >= 0 ? 'positive' : 'negative');
+      setValue('binanceLiqValue', money(runtime.binanceLiq), 'negative');
       setValue('intClientEquityAfterFees', money(estimatedClientEquityAfterFees), estimatedClientEquityAfterFees >= 0 ? 'positive' : 'negative');
       setValue('intGrossProfit', money(internalProfit), internalProfit >= 0 ? 'positive' : 'negative');
 
-      setValue('adminAccruedFunding', money(runtime.fundingAccrual), 'neutral');
-      setValue('adminExitFee', `${money(estimatedExitFee)} · ${percent(config.exitFeeRate)}`, 'neutral');
-      setValue('adminPerformanceFee', `${money(estimatedPerformanceFee)} · ${percent(config.performanceFeeRate)}`, 'neutral');
-      setValue('adminCashoutFee', `${money(estimatedCashoutFee)} · ${percent(config.cashoutFeeRate)}`, 'neutral');
+      setValue('adminAccruedFunding', money(appliedFunding), 'neutral');
+      setValue('adminExitFee', money(appliedExitFee), 'neutral');
+      setValue('adminPerformanceFee', money(appliedPerformanceFee), 'neutral');
+      setValue('adminCashoutFee', money(appliedCashoutFee), 'neutral');
+
+      renderFundingTable();
+      renderSnapshotTable();
     }
 
     function markDirty(state = true) {
       isDirty = state;
       const el = document.getElementById('dirtyStateText');
       if (!el) return;
-
-      if (isDirty) {
-        el.textContent = 'Admin form changed. Press Save Changes to commit config.json to GitHub.';
-      } else {
-        el.textContent = 'No unsaved admin changes.';
-      }
+      el.textContent = state
+        ? 'Admin form changed. Press Save Changes to commit current settings.'
+        : 'No unsaved admin changes.';
     }
 
     function openAdminModal() {
@@ -1051,9 +1428,8 @@
       document.getElementById('performanceBasis').value = config.performanceBasis || 'unrealized_pnl';
       document.getElementById('cashoutBasis').value = config.cashoutBasis || 'position_value';
       document.getElementById('adminKey').value = config.adminKey || '';
-      document.getElementById('ghOwner').value = config.ghOwner || '';
-      document.getElementById('ghRepo').value = config.ghRepo || '';
-      document.getElementById('ghBranch').value = config.ghBranch || 'main';
+      document.getElementById('overridePrice').value = config.overridePrice || '';
+      document.getElementById('ghToken').value = getSavedToken();
     }
 
     function readFormIntoConfig() {
@@ -1072,77 +1448,346 @@
       config.performanceBasis = document.getElementById('performanceBasis').value;
       config.cashoutBasis = document.getElementById('cashoutBasis').value;
       config.adminKey = document.getElementById('adminKey').value;
-      config.ghOwner = document.getElementById('ghOwner').value.trim();
-      config.ghRepo = document.getElementById('ghRepo').value.trim();
-      config.ghBranch = document.getElementById('ghBranch').value.trim() || 'main';
+      config.overridePrice = document.getElementById('overridePrice').value.trim();
     }
 
-    async function refreshData() {
-      try {
-        document.getElementById('statusTrade').textContent = 'Refreshing';
-
-        const [price, fundingRates, fundingInfo] = await Promise.all([
-          fetchMarkPrice(),
-          fetchFundingRates(),
-          fetchFundingInfo()
-        ]);
-
-        runtime.currentPrice = price;
-        runtime.fundingRates = fundingRates;
-        runtime.fundingInfo = fundingInfo;
-        runtime.lastRefresh = Date.now();
-
-        computeFundingAccrual(price);
-        render();
-
-        document.getElementById('statusTrade').textContent = 'Monitoring Live';
-      } catch (error) {
-        document.getElementById('statusTrade').textContent = 'Live Feed Error';
-        console.error(error);
-      }
-    }
-
-    async function commitConfigToGitHub({ owner, repo, branch, token, configObject }) {
-      const path = 'config.json';
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-      const headers = {
+    function getGitHubHeaders(token) {
+      return {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${token}`,
         'X-GitHub-Api-Version': '2022-11-28'
       };
+    }
 
-      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, {
-        method: 'GET',
-        headers
-      });
+    function saveTokenLocal(token) {
+      localStorage.setItem(GH_TOKEN_STORAGE_KEY, token);
+    }
 
+    function getSavedToken() {
+      return localStorage.getItem(GH_TOKEN_STORAGE_KEY) || '';
+    }
+
+    async function commitJsonFile(path, dataObject, message) {
+      const token = document.getElementById('ghToken').value.trim() || getSavedToken();
+      if (!token) throw new Error('GitHub token is required.');
+
+      const owner = config.ghOwner;
+      const repo = config.ghRepo;
+      const branch = config.ghBranch || 'main';
+
+      if (!owner || !repo) throw new Error('ghOwner and ghRepo must be defined in config.json');
+
+      saveTokenLocal(token);
+
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const headers = getGitHubHeaders(token);
+
+      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { method: 'GET', headers });
       if (!getRes.ok) {
-        const txt = await getRes.text();
-        throw new Error(`Could not read current config.json: ${txt}`);
+        const err = await getRes.text();
+        throw new Error(`Could not read ${path}: ${err}`);
       }
 
       const currentFile = await getRes.json();
-      const jsonText = JSON.stringify(configObject, null, 2);
-      const encodedContent = btoa(unescape(encodeURIComponent(jsonText)));
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
 
       const putRes = await fetch(apiUrl, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
-          message: 'Update config.json from CFG admin panel',
-          content: encodedContent,
+          message,
+          content,
           sha: currentFile.sha,
           branch
         })
       });
 
       if (!putRes.ok) {
-        const errText = await putRes.text();
-        throw new Error(`Commit failed: ${errText}`);
+        const err = await putRes.text();
+        throw new Error(`Commit failed for ${path}: ${err}`);
       }
 
       return await putRes.json();
+    }
+
+    async function queueHistoryCommit(message) {
+      saveQueue = saveQueue.then(() => commitJsonFile('history.json', historyData, message)).catch(console.error);
+      return saveQueue;
+    }
+
+    async function saveConfigAndCommit() {
+      readFormIntoConfig();
+      saveConfigLocal();
+      await commitJsonFile('config.json', config, 'Update config.json from CFG admin panel');
+      markDirty(false);
+    }
+
+    function addEventIfMissing(eventKey, eventObject) {
+      const exists = historyData.events.some(e => e.eventKey === eventKey);
+      if (!exists) historyData.events.push({ ...eventObject, eventKey });
+      return !exists;
+    }
+
+    async function maybeSendEmail(subject, message) {
+      if (!config.emailEnabled || !config.emailjs_publicKey || !config.emailjs_serviceId || !config.emailjs_templateId) return;
+      try {
+        emailjs.init({ publicKey: config.emailjs_publicKey });
+        await emailjs.send(config.emailjs_serviceId, config.emailjs_templateId, {
+          subject,
+          message,
+          to_email: 'mahmoudchatila974@gmail.com'
+        });
+      } catch (error) {
+        console.error('Email send failed', error);
+      }
+    }
+
+    async function showBrowserNotification(title, body) {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body });
+      } else if (Notification.permission !== 'denied') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          new Notification(title, { body });
+        }
+      }
+    }
+
+    async function checkLiquidationAndPersist() {
+      const price = runtime.currentPrice || 0;
+      const customerLiq = runtime.customerLiq || 0;
+      const binanceLiq = runtime.binanceLiq || 0;
+
+      const customerTriggered = price <= customerLiq && customerLiq > 0;
+      const binanceTriggered = price <= binanceLiq && binanceLiq > 0;
+
+      const banner = document.getElementById('liquidationBanner');
+      const adminBanner = document.getElementById('adminBanner');
+
+      if (customerTriggered || binanceTriggered) {
+        const lines = [];
+        if (customerTriggered) lines.push(`Customer liquidation threshold reached at ${money(price)}.`);
+        if (binanceTriggered) lines.push(`Binance liquidation estimate reached at ${money(price)}.`);
+
+        banner.classList.remove('hidden');
+        banner.classList.add('red');
+        banner.textContent = lines.join(' ');
+
+        adminBanner.classList.remove('hidden');
+        adminBanner.classList.add('red');
+        adminBanner.textContent = lines.join(' ');
+
+        const inserted = addEventIfMissing(`liq_${config.tradeId}_${new Date().toISOString().slice(0,16)}_${customerTriggered}_${binanceTriggered}`, {
+          type: 'liquidation_event',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          currentPrice: price,
+          customerLiquidationPrice: customerLiq,
+          binanceLiquidationPrice: binanceLiq,
+          customerTriggered,
+          binanceTriggered,
+          time: new Date().toISOString()
+        });
+
+        if (inserted) {
+          await queueHistoryCommit('Save liquidation event');
+          await showBrowserNotification('CFG Liquidation Alert', lines.join(' '));
+          await maybeSendEmail('CFG Liquidation Alert', lines.join(' '));
+        }
+      } else {
+        banner.classList.add('hidden');
+        adminBanner.classList.add('hidden');
+        banner.textContent = '';
+        adminBanner.textContent = '';
+      }
+    }
+
+    async function rebuildMissedLiquidationsFromSnapshots() {
+      const snapshots = getSnapshotEvents();
+      if (!snapshots.length) return;
+
+      for (const snap of snapshots) {
+        const priceLow = Number(snap.low || 0);
+        const customerTriggered = priceLow <= Number(runtime.customerLiq || 0) && runtime.customerLiq > 0;
+        const binanceTriggered = priceLow <= Number(runtime.binanceLiq || 0) && runtime.binanceLiq > 0;
+        if (!customerTriggered && !binanceTriggered) continue;
+
+        addEventIfMissing(`liq_rebuild_${snap.openTime}_${customerTriggered}_${binanceTriggered}`, {
+          type: 'liquidation_event',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          currentPrice: priceLow,
+          customerLiquidationPrice: runtime.customerLiq,
+          binanceLiquidationPrice: runtime.binanceLiq,
+          customerTriggered,
+          binanceTriggered,
+          rebuiltFromSnapshot: true,
+          sourceSnapshotOpenTime: snap.openTime,
+          time: new Date(snap.openTime).toISOString()
+        });
+      }
+    }
+
+    async function refreshData() {
+      try {
+        document.getElementById('statusTrade').textContent = 'Refreshing';
+
+        const [livePrice, fundingInfo] = await Promise.all([
+          fetchMarkPrice(),
+          fetchFundingInfo()
+        ]);
+
+        runtime.livePrice = livePrice;
+        runtime.fundingInfo = fundingInfo;
+        runtime.lastRefresh = Date.now();
+
+        const source = getCurrentPriceSource();
+        runtime.currentPrice = source.price;
+
+        await processFundingPeriods(runtime.currentPrice);
+        await processPriceSnapshots();
+        computeFundingAccrualFromHistory();
+        runtime.customerLiq = getCustomerLiquidationPrice();
+        runtime.binanceLiq = getBinanceLiquidationEstimate();
+        await rebuildMissedLiquidationsFromSnapshots();
+        render();
+        await checkLiquidationAndPersist();
+
+        document.getElementById('statusTrade').textContent = config.tradeStatus === 'closed' ? 'Closed' : 'Monitoring Live';
+      } catch (error) {
+        document.getElementById('statusTrade').textContent = 'Live Feed Error';
+        console.error(error);
+      }
+    }
+
+    function getInvoiceLines() {
+      const c = runtime.lastComputed;
+      if (!c || !Object.keys(c).length) return [];
+
+      return [
+        ['Trade Label', config.tradeId || '—'],
+        ['Status', config.tradeStatus || 'open'],
+        ['Close Price Used', money(c.price)],
+        ['Current Position Value', money(c.positionValue)],
+        ['Current Equity Estimate', money(c.equityValue)],
+        ['Unrealized PnL', money(c.unrealizedPnl)],
+        ['Applied Contract Funding', money(c.appliedFunding)],
+        ['Applied Exit Fee', money(c.appliedExitFee)],
+        ['Applied Performance Fee', money(c.appliedPerformanceFee)],
+        ['Applied Cash-out Fee', money(c.appliedCashoutFee)],
+        ['Actual Binance Funding', money(runtime.actualBinanceFunding)],
+        ['Final Amount To Give Client', money(c.estimatedClientEquityAfterFees)],
+        ['Estimated CFG Gross Profit', money(c.internalProfit)]
+      ];
+    }
+
+    async function generateInvoicePdf(saveEvent = true) {
+      const c = runtime.lastComputed;
+      if (!c || !Object.keys(c).length) {
+        alert('No settlement data available yet.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text('Chatila Financial Group', 14, 18);
+      doc.setFontSize(13);
+      doc.text('Settlement Invoice / Close Estimate', 14, 28);
+
+      let y = 40;
+      for (const [label, value] of getInvoiceLines()) {
+        doc.setFontSize(10);
+        doc.text(`${label}: ${value}`, 14, y);
+        y += 8;
+        if (y > 275) {
+          doc.addPage();
+          y = 20;
+        }
+      }
+
+      y += 8;
+      doc.setFontSize(11);
+      doc.text('Funding Period Breakdown', 14, y);
+      y += 8;
+
+      const fundingEvents = getFundingEvents();
+      for (const e of fundingEvents.slice(-25)) {
+        const line = `${e.fundingTimeIso} | Rate ${percent(e.fundingRate, 4)} | Mark ${money(e.markPrice)} | Binance ${money(e.binanceFundingAmount)} | Contract ${money(e.contractFundingCharge)}`;
+        doc.setFontSize(8);
+        doc.text(line, 14, y);
+        y += 6;
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+      }
+
+      const filename = `${(config.tradeId || 'CFG-Invoice').replace(/[^a-z0-9-_]/gi, '_')}.pdf`;
+      doc.save(filename);
+
+      if (saveEvent) {
+        const inserted = addEventIfMissing(`invoice_${config.tradeId}_${Date.now()}`, {
+          type: 'invoice_generated',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          generatedAt: new Date().toISOString(),
+          closePriceUsed: c.price,
+          finalClientPayout: c.estimatedClientEquityAfterFees,
+          estimatedCfgProfit: c.internalProfit,
+          filename
+        });
+
+        if (inserted) {
+          await queueHistoryCommit('Save invoice generation event');
+        }
+      }
+    }
+
+    async function closeCurrentPosition() {
+      const c = runtime.lastComputed;
+      if (!c || !Object.keys(c).length) {
+        alert('No current settlement data available.');
+        return;
+      }
+
+      config.tradeStatus = 'closed';
+      config.closedAt = new Date().toISOString();
+      config.closePrice = c.price;
+
+      addEventIfMissing(`close_${config.tradeId}_${Date.now()}`, {
+        type: 'close_event',
+        tradeId: config.tradeId,
+        symbol: config.symbol,
+        closedAt: config.closedAt,
+        closePrice: c.price,
+        finalClientPayout: c.estimatedClientEquityAfterFees,
+        estimatedCfgProfit: c.internalProfit,
+        customerLiquidationPrice: runtime.customerLiq,
+        binanceLiquidationPrice: runtime.binanceLiq
+      });
+
+      await saveConfigAndCommit();
+      await queueHistoryCommit('Save close event');
+      await generateInvoicePdf(false);
+      await maybeSendEmail(
+        'CFG Position Closed',
+        `Trade ${config.tradeId} has been marked closed at ${money(c.price)}. Final client payout estimate: ${money(c.estimatedClientEquityAfterFees)}.`
+      );
+      await refreshData();
+      alert('Position marked closed, invoice generated, and close data saved.');
+    }
+
+    async function testEmail() {
+      try {
+        await maybeSendEmail('CFG Test Email', 'This is a test email from the CFG SOL Position Monitor.');
+        alert('Test email sent attempt completed.');
+      } catch (error) {
+        console.error(error);
+        alert('Test email failed.');
+      }
     }
 
     function watchAdminFields() {
@@ -1152,41 +1797,25 @@
       const fields = form.querySelectorAll('input, select');
       fields.forEach((field) => {
         field.addEventListener('input', () => markDirty(true));
-        field.addEventListener('change', () => markDirty(true));
+        field.addEventListener('change', async () => {
+          markDirty(true);
+          if (field.id === 'overridePrice') {
+            await refreshData();
+          }
+        });
+      });
+
+      ['applyFunding', 'applyExitFee', 'applyPerformanceFee', 'applyCashoutFee'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => render());
       });
     }
 
     function initActions() {
       document.getElementById('refreshBtn').addEventListener('click', refreshData);
 
-      document.getElementById('closePreviewBtn').addEventListener('click', () => {
-        alert('This page provides a live estimate only. The actual position is closed manually on your exchange and settled separately under contract.');
-      });
-
       document.getElementById('saveConfigBtn').addEventListener('click', async () => {
         try {
-          readFormIntoConfig();
-          saveConfigLocal();
-
-          const owner = document.getElementById('ghOwner').value.trim();
-          const repo = document.getElementById('ghRepo').value.trim();
-          const branch = document.getElementById('ghBranch').value.trim() || 'main';
-          const token = document.getElementById('ghToken').value.trim();
-
-          if (!owner || !repo || !token) {
-            alert('Enter GitHub owner, repo, and token.');
-            return;
-          }
-
-          await commitConfigToGitHub({
-            owner,
-            repo,
-            branch,
-            token,
-            configObject: config
-          });
-
-          markDirty(false);
+          await saveConfigAndCommit();
           alert('Changes saved and committed to GitHub successfully.');
           await refreshData();
         } catch (error) {
@@ -1195,11 +1824,14 @@
         }
       });
 
+      document.getElementById('generateInvoiceBtn').addEventListener('click', () => generateInvoicePdf(true));
+      document.getElementById('closePositionBtn').addEventListener('click', closeCurrentPosition);
+      document.getElementById('testEmailBtn').addEventListener('click', testEmail);
       document.getElementById('lockAdminBtn').addEventListener('click', lockAdmin);
 
       document.getElementById('keySubmitBtn').addEventListener('click', () => {
-        const key = document.getElementById('keyInput').value;
-        if (key === config.adminKey) {
+        const key = document.getElementById('keyInput').value.trim();
+        if (key === String(config.adminKey || '').trim()) {
           unlockAdmin();
           closeAdminModal();
         } else {
@@ -1223,6 +1855,7 @@
 
     async function init() {
       await loadConfig();
+      await loadHistory();
       bindForm();
       initActions();
       watchAdminFields();
