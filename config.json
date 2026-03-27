@@ -6,7 +6,7 @@
   "leverage": 1.5,
   "entryPrice": 75,
   "maintenanceMargin": 0.005,
-  "quantity": 0,
+  "quantity": 93.33333,
   "contractFundingRate": 0.0004,
   "exitFeeRate": 0.0155,
   "performanceFeeRate": 8,
