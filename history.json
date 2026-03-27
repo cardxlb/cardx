@@ -12965,6 +12965,18 @@
       "recoveredAt": "2026-03-27T08:50:46.206Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1774601446206"
+    },
+    {
+      "type": "close_event",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "closedAt": "2026-03-27T08:54:11.319Z",
+      "closePrice": 85.07144957,
+      "finalClientPayout": 5827.238027383242,
+      "estimatedCfgProfit": 605.2970277518143,
+      "customerLiquidationPrice": 30.402229599864285,
+      "binanceLiquidationPrice": 30.08586413394455,
+      "eventKey": "close_CFG SOL Long 001_1774601651319"
     }
   ]
 }
