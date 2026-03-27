@@ -9,7 +9,7 @@
   "quantity": 93.33333,
   "contractFundingRate": 0.0004,
   "exitFeeRate": 0.0155,
-  "performanceFeeRate": 8,
+  "performanceFeeRate": 0.08,
   "cashoutFeeRate": 0,
   "performanceBasis": "unrealized_pnl",
   "cashoutBasis": "position_value",
