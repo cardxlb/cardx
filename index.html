@@ -2129,7 +2129,7 @@ async function maybeSendEmail(subject, message) {
       }
     }
 
-<script>
+
 async function testEmail() {
   try {
     const response = await maybeSendEmail(
@@ -2152,7 +2152,7 @@ async function testEmail() {
     showAdminBanner(`Test email failed: ${msg}`, 'red');
   }
 }
-</script>
+
 
     function watchAdminFields() {
       const form = document.getElementById('adminForm');
