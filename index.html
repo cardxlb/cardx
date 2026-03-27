@@ -4,8 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CFG SOL Position Monitor</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
   <style>
     :root {
       --bg: #eef2f7;
@@ -418,6 +421,12 @@
       color: var(--red);
     }
 
+    .banner.green {
+      background: rgba(13, 138, 71, 0.10);
+      border-color: rgba(13, 138, 71, 0.25);
+      color: var(--green);
+    }
+
     .hidden {
       display: none !important;
     }
@@ -447,8 +456,46 @@
       line-height: 1.45;
     }
 
+    .chart-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: white;
+      height: 420px;
+    }
+
+    .sync-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .sync-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fbfcfe;
+    }
+
+    .sync-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .sync-value {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--navy);
+      word-break: break-word;
+    }
+
     @media (max-width: 1024px) {
-      .grid, .admin-grid { grid-template-columns: 1fr; }
+      .grid, .admin-grid, .sync-strip { grid-template-columns: 1fr; }
       .status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
@@ -619,9 +666,28 @@
       <div class="panel-header">
         <div>
           <div class="panel-title">Internal CFG View</div>
-          <div class="panel-note">Operational fee calculations, internal profitability, backlog recovery, liquidation monitoring, settlement preview, and invoice generation.</div>
+          <div class="panel-note">Operational fee calculations, internal profitability, backlog recovery, liquidation monitoring, settlement preview, invoice generation, and sync status.</div>
         </div>
         <div class="pill amber" id="adminState">Unlocked</div>
+      </div>
+
+      <div class="sync-strip">
+        <div class="sync-card">
+          <div class="sync-label">History Sync</div>
+          <div class="sync-value" id="syncState">Idle</div>
+        </div>
+        <div class="sync-card">
+          <div class="sync-label">Last History Commit</div>
+          <div class="sync-value" id="lastHistoryCommit">—</div>
+        </div>
+        <div class="sync-card">
+          <div class="sync-label">Unsaved Events</div>
+          <div class="sync-value" id="unsavedEventsCount">0</div>
+        </div>
+        <div class="sync-card">
+          <div class="sync-label">Last Commit Error</div>
+          <div class="sync-value" id="lastCommitError">None</div>
+        </div>
       </div>
 
       <div class="admin-grid">
@@ -648,7 +714,7 @@
             <div class="row">
               <div class="row-left">
                 <div class="row-title">Estimated Revenue Next Funding Period (8h)</div>
-                <div class="row-desc"></div>
+                <div class="row-desc">Current contractual 0.05% charge minus estimated Binance funding using the latest known funding rate.</div>
               </div>
               <div class="row-value" id="nextFundingRevenue">—</div>
             </div>
@@ -871,6 +937,11 @@
             </table>
           </div>
 
+          <div class="panel-title small-title" style="margin-top:18px;">Price / Funding / Liquidation Timeline</div>
+          <div class="chart-wrap">
+            <canvas id="timelineChart"></canvas>
+          </div>
+
           <div id="adminBanner" class="banner hidden"></div>
         </div>
       </div>
@@ -894,7 +965,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'cfg-sol-monitor-config-v6';
+    const STORAGE_KEY = 'cfg-sol-monitor-config-v7';
     const ADMIN_SESSION_KEY = 'cfg-sol-monitor-admin-open';
     const GH_TOKEN_STORAGE_KEY = 'cfg-sol-monitor-gh-token-v1';
 
@@ -902,6 +973,13 @@
     let historyData = { events: [] };
     let isDirty = false;
     let saveQueue = Promise.resolve();
+    let timelineChart = null;
+    let syncState = {
+      state: 'Idle',
+      lastCommitAt: '',
+      unsavedEvents: 0,
+      lastError: ''
+    };
 
     let runtime = {
       livePrice: null,
@@ -916,6 +994,28 @@
       lastComputed: {},
       latestFundingRate: 0
     };
+
+    function setSyncState(partial) {
+      syncState = { ...syncState, ...partial };
+      document.getElementById('syncState').textContent = syncState.state || 'Idle';
+      document.getElementById('lastHistoryCommit').textContent = syncState.lastCommitAt || '—';
+      document.getElementById('unsavedEventsCount').textContent = String(syncState.unsavedEvents || 0);
+      document.getElementById('lastCommitError').textContent = syncState.lastError || 'None';
+    }
+
+    function showAdminBanner(message, type = 'red') {
+      const banner = document.getElementById('adminBanner');
+      banner.classList.remove('hidden', 'red', 'green');
+      banner.classList.add(type);
+      banner.textContent = message;
+    }
+
+    function hideAdminBanner() {
+      const banner = document.getElementById('adminBanner');
+      banner.classList.add('hidden');
+      banner.classList.remove('red', 'green');
+      banner.textContent = '';
+    }
 
     async function loadConfig() {
       try {
@@ -1092,6 +1192,10 @@
       return historyData.events.filter(e => e.type === 'price_snapshot_5m').sort((a, b) => a.openTime - b.openTime);
     }
 
+    function getLiquidationEvents() {
+      return historyData.events.filter(e => e.type === 'liquidation_event').sort((a, b) => new Date(a.time) - new Date(b.time));
+    }
+
     function getLatestFundingTimeSaved() {
       const fundingEvents = getFundingEvents();
       return fundingEvents.length ? Number(fundingEvents[fundingEvents.length - 1].fundingTime) : 0;
@@ -1114,9 +1218,214 @@
       runtime.actualBinanceFunding = fundingEvents.reduce((sum, e) => sum + Number(e.binanceFundingAmount || 0), 0);
     }
 
+    function findSnapshotForFundingTime(fundingTime) {
+      const snapshots = getSnapshotEvents();
+      for (const s of snapshots) {
+        if (Number(s.openTime) <= fundingTime && Number(s.closeTime) >= fundingTime) {
+          return {
+            openTime: s.openTime,
+            openTimeIso: s.openTimeIso,
+            open: s.open,
+            high: s.high,
+            low: s.low,
+            close: s.close
+          };
+        }
+      }
+      return null;
+    }
+
+    function initializeHistoryIfNeeded() {
+      const inserted = addEventIfMissing(`history_initialized_${config.tradeId}`, {
+        type: 'history_initialized',
+        tradeId: config.tradeId,
+        symbol: config.symbol,
+        initializedAt: new Date().toISOString()
+      });
+      if (inserted) syncState.unsavedEvents += 1;
+    }
+
+    function setValue(id, text, cls) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      if (cls) {
+        el.classList.remove('positive', 'negative', 'neutral');
+        el.classList.add(cls);
+      }
+    }
+
+    function getToggle(id) {
+      return document.getElementById(id)?.checked ?? true;
+    }
+
+    function updateClientPill(unrealizedPnl) {
+      const pill = document.getElementById('clientPnLPill');
+      if (unrealizedPnl > 0) {
+        pill.className = 'pill green';
+        pill.textContent = 'Unrealized Gain';
+      } else if (unrealizedPnl < 0) {
+        pill.className = 'pill red';
+        pill.textContent = 'Unrealized Loss';
+      } else {
+        pill.className = 'pill amber';
+        pill.textContent = 'Flat';
+      }
+    }
+
+    function getGitHubHeaders(token) {
+      return {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      };
+    }
+
+    async function commitJsonFile(path, dataObject, message) {
+      const token = document.getElementById('ghToken').value.trim() || getSavedToken();
+      if (!token) throw new Error('GitHub token is required.');
+
+      const owner = config.ghOwner;
+      const repo = config.ghRepo;
+      const branch = config.ghBranch || 'main';
+
+      if (!owner || !repo) throw new Error('ghOwner and ghRepo must be defined in config.json');
+
+      saveTokenLocal(token);
+
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const headers = getGitHubHeaders(token);
+
+      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { method: 'GET', headers });
+      if (!getRes.ok) {
+        const err = await getRes.text();
+        throw new Error(`Could not read ${path}: ${err}`);
+      }
+
+      const currentFile = await getRes.json();
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          message,
+          content,
+          sha: currentFile.sha,
+          branch
+        })
+      });
+
+      if (!putRes.ok) {
+        const err = await putRes.text();
+        throw new Error(`Commit failed for ${path}: ${err}`);
+      }
+
+      return await putRes.json();
+    }
+
     async function queueHistoryCommit(message) {
-      saveQueue = saveQueue.then(() => commitJsonFile('history.json', historyData, message)).catch(console.error);
+      setSyncState({ state: 'Pending' });
+      saveQueue = saveQueue
+        .then(async () => {
+          const result = await commitJsonFile('history.json', historyData, message);
+          setSyncState({
+            state: 'Synced',
+            lastCommitAt: new Date().toLocaleString(),
+            unsavedEvents: 0,
+            lastError: ''
+          });
+          hideAdminBanner();
+          return result;
+        })
+        .catch(error => {
+          console.error(error);
+          setSyncState({
+            state: 'Commit Failed',
+            lastError: error.message || 'Unknown error'
+          });
+          showAdminBanner(`History sync failed: ${error.message || 'Unknown error'}`, 'red');
+        });
       return saveQueue;
+    }
+
+    async function saveConfigAndCommit() {
+      readFormIntoConfig();
+      saveConfigLocal();
+      await commitJsonFile('config.json', config, 'Update config.json from CFG admin panel');
+      markDirty(false);
+    }
+
+    async function maybeSendEmail(subject, message) {
+      if (!config.emailEnabled || !config.emailjs_publicKey || !config.emailjs_serviceId || !config.emailjs_templateId) return;
+      try {
+        emailjs.init({ publicKey: config.emailjs_publicKey });
+        await emailjs.send(config.emailjs_serviceId, config.emailjs_templateId, {
+          subject,
+          message,
+          to_email: 'mahmoudchatila974@gmail.com'
+        });
+      } catch (error) {
+        console.error('Email send failed', error);
+      }
+    }
+
+    async function showBrowserNotification(title, body) {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body });
+      } else if (Notification.permission !== 'denied') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          new Notification(title, { body });
+        }
+      }
+    }
+
+    async function processPriceSnapshots() {
+      const lastSavedSnapshot = getLatestSnapshotTimeSaved();
+      const startTime = lastSavedSnapshot ? lastSavedSnapshot + 1 : fromLocalInputToUtcMs(config.openTime);
+      const klines = await fetchMarkPriceKlines(startTime);
+
+      let changed = false;
+
+      for (const k of klines) {
+        const openTime = Number(k[0]);
+        const closeTime = Number(k[6]);
+
+        const inserted = addEventIfMissing(`price_5m_${config.symbol}_${openTime}`, {
+          type: 'price_snapshot_5m',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          openTime,
+          openTimeIso: new Date(openTime).toISOString(),
+          closeTime,
+          closeTimeIso: new Date(closeTime).toISOString(),
+          open: Number(k[1]),
+          high: Number(k[2]),
+          low: Number(k[3]),
+          close: Number(k[4]),
+          savedAt: new Date().toISOString()
+        });
+
+        if (inserted) {
+          changed = true;
+          syncState.unsavedEvents += 1;
+        }
+      }
+
+      if (changed) {
+        addEventIfMissing(`backfill_${Date.now()}`, {
+          type: 'backfill_run',
+          tradeId: config.tradeId,
+          symbol: config.symbol,
+          recoveredAt: new Date().toISOString(),
+          note: 'Recovered 5-minute price backlog and/or funding backlog after reopening.'
+        });
+        syncState.unsavedEvents += 1;
+        setSyncState({ unsavedEvents: syncState.unsavedEvents });
+        await queueHistoryCommit('Save 5-minute snapshot history');
+      }
     }
 
     async function processFundingPeriods(currentPrice) {
@@ -1146,7 +1455,9 @@
         cumulativeContract += contractFundingCharge;
         cumulativeBinance += binanceFundingAmount;
 
-        const event = {
+        const snapshot5m = findSnapshotForFundingTime(fundingTime);
+
+        const inserted = addEventIfMissing(`funding_${config.symbol}_${fundingTime}`, {
           type: 'funding_period',
           tradeId: config.tradeId,
           symbol: config.symbol,
@@ -1161,91 +1472,120 @@
           binanceFundingAmount,
           cumulativeContractFunding: cumulativeContract,
           cumulativeBinanceFunding: cumulativeBinance,
+          snapshot5m,
           savedAt: new Date().toISOString()
-        };
+        });
 
-        const inserted = addEventIfMissing(`funding_${config.symbol}_${fundingTime}`, event);
-        if (inserted) changed = true;
+        if (inserted) {
+          changed = true;
+          syncState.unsavedEvents += 1;
+        }
       }
 
       computeFundingAccrualFromHistory();
 
       if (changed) {
+        setSyncState({ unsavedEvents: syncState.unsavedEvents });
         await queueHistoryCommit('Save funding period history');
       }
     }
 
-    async function processPriceSnapshots() {
-      const lastSavedSnapshot = getLatestSnapshotTimeSaved();
-      const startTime = lastSavedSnapshot ? lastSavedSnapshot + 1 : fromLocalInputToUtcMs(config.openTime);
-      const klines = await fetchMarkPriceKlines(startTime);
+    async function rebuildMissedLiquidationsFromSnapshots() {
+      const snapshots = getSnapshotEvents();
+      if (!snapshots.length) return;
 
       let changed = false;
 
-      for (const k of klines) {
-        const openTime = Number(k[0]);
-        const closeTime = Number(k[6]);
-        const event = {
-          type: 'price_snapshot_5m',
+      for (const snap of snapshots) {
+        const priceLow = Number(snap.low || 0);
+        const customerTriggered = priceLow <= Number(runtime.customerLiq || 0) && runtime.customerLiq > 0;
+        const binanceTriggered = priceLow <= Number(runtime.binanceLiq || 0) && runtime.binanceLiq > 0;
+        if (!customerTriggered && !binanceTriggered) continue;
+
+        const inserted = addEventIfMissing(`liq_rebuild_${snap.openTime}_${customerTriggered}_${binanceTriggered}`, {
+          type: 'liquidation_event',
           tradeId: config.tradeId,
           symbol: config.symbol,
-          openTime,
-          openTimeIso: new Date(openTime).toISOString(),
-          closeTime,
-          closeTimeIso: new Date(closeTime).toISOString(),
-          open: Number(k[1]),
-          high: Number(k[2]),
-          low: Number(k[3]),
-          close: Number(k[4]),
-          savedAt: new Date().toISOString()
-        };
-        const inserted = addEventIfMissing(`price_5m_${config.symbol}_${openTime}`, event);
-        if (inserted) changed = true;
+          currentPrice: priceLow,
+          customerLiquidationPrice: runtime.customerLiq,
+          binanceLiquidationPrice: runtime.binanceLiq,
+          customerTriggered,
+          binanceTriggered,
+          rebuiltFromSnapshot: true,
+          sourceSnapshotOpenTime: snap.openTime,
+          time: new Date(snap.openTime).toISOString()
+        });
+
+        if (inserted) {
+          changed = true;
+          syncState.unsavedEvents += 1;
+        }
       }
 
       if (changed) {
-        addEventIfMissing(`backfill_${Date.now()}`, {
-          type: 'backfill_run',
+        setSyncState({ unsavedEvents: syncState.unsavedEvents });
+        await queueHistoryCommit('Save rebuilt liquidation events');
+      }
+    }
+
+    async function checkLiquidationAndPersist() {
+      const price = runtime.currentPrice || 0;
+      const customerLiq = runtime.customerLiq || 0;
+      const binanceLiq = runtime.binanceLiq || 0;
+
+      const customerTriggered = price <= customerLiq && customerLiq > 0;
+      const binanceTriggered = price <= binanceLiq && binanceLiq > 0;
+
+      const banner = document.getElementById('liquidationBanner');
+      const adminBanner = document.getElementById('adminBanner');
+
+      if (customerTriggered || binanceTriggered) {
+        const lines = [];
+        if (customerTriggered) lines.push(`Customer liquidation threshold reached at ${money(price)}.`);
+        if (binanceTriggered) lines.push(`Binance liquidation estimate reached at ${money(price)}.`);
+
+        banner.classList.remove('hidden');
+        banner.classList.add('red');
+        banner.textContent = lines.join(' ');
+
+        adminBanner.classList.remove('hidden');
+        adminBanner.classList.add('red');
+        adminBanner.textContent = lines.join(' ');
+
+        const inserted = addEventIfMissing(`liq_live_${config.tradeId}_${new Date().toISOString().slice(0,16)}_${customerTriggered}_${binanceTriggered}`, {
+          type: 'liquidation_event',
           tradeId: config.tradeId,
           symbol: config.symbol,
-          recoveredAt: new Date().toISOString(),
-          note: 'Recovered 5-minute price backlog and/or funding backlog after reopening.'
+          currentPrice: price,
+          customerLiquidationPrice: customerLiq,
+          binanceLiquidationPrice: binanceLiq,
+          customerTriggered,
+          binanceTriggered,
+          time: new Date().toISOString()
         });
-        await queueHistoryCommit('Save 5-minute snapshot history');
-      }
-    }
 
-    function updateClientPill(unrealizedPnl) {
-      const pill = document.getElementById('clientPnLPill');
-      if (unrealizedPnl > 0) {
-        pill.className = 'pill green';
-        pill.textContent = 'Unrealized Gain';
-      } else if (unrealizedPnl < 0) {
-        pill.className = 'pill red';
-        pill.textContent = 'Unrealized Loss';
+        if (inserted) {
+          syncState.unsavedEvents += 1;
+          setSyncState({ unsavedEvents: syncState.unsavedEvents });
+          await queueHistoryCommit('Save live liquidation event');
+          await showBrowserNotification('CFG Liquidation Alert', lines.join(' '));
+          await maybeSendEmail('CFG Liquidation Alert', lines.join(' '));
+        }
       } else {
-        pill.className = 'pill amber';
-        pill.textContent = 'Flat';
+        banner.classList.add('hidden');
+        banner.textContent = '';
+        if (!adminBanner.classList.contains('green')) {
+          adminBanner.classList.add('hidden');
+          adminBanner.classList.remove('red');
+          adminBanner.textContent = '';
+        }
       }
-    }
-
-    function setValue(id, text, cls) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = text;
-      if (cls) {
-        el.classList.remove('positive', 'negative', 'neutral');
-        el.classList.add(cls);
-      }
-    }
-
-    function getToggle(id) {
-      return document.getElementById(id)?.checked ?? true;
     }
 
     function renderFundingTable() {
       const tbody = document.getElementById('fundingTableBody');
       const events = getFundingEvents();
+
       if (!events.length) {
         tbody.innerHTML = `<tr><td colspan="8">No funding history saved yet.</td></tr>`;
         return;
@@ -1268,6 +1608,7 @@
     function renderSnapshotTable() {
       const tbody = document.getElementById('snapshotTableBody');
       const events = getSnapshotEvents();
+
       if (!events.length) {
         tbody.innerHTML = `<tr><td colspan="5">No price snapshot history saved yet.</td></tr>`;
         return;
@@ -1282,6 +1623,96 @@
           <td>${money(e.close)}</td>
         </tr>
       `).join('');
+    }
+
+    function renderTimelineChart() {
+      const snapshots = getSnapshotEvents().slice(-200);
+      const funding = getFundingEvents().slice(-100);
+      const liquidations = getLiquidationEvents().slice(-50);
+
+      const labels = snapshots.map(s => s.openTimeIso);
+      const prices = snapshots.map(s => Number(s.close));
+      const customerLiqLine = snapshots.map(() => Number(runtime.customerLiq || 0));
+      const binanceLiqLine = snapshots.map(() => Number(runtime.binanceLiq || 0));
+
+      const fundingMarkers = labels.map(label => {
+        const match = funding.find(f => f.snapshot5m && f.snapshot5m.openTimeIso === label);
+        return match ? Number(match.markPrice || null) : null;
+      });
+
+      const liquidationMarkers = labels.map(label => {
+        const match = liquidations.find(l => {
+          const t = new Date(l.time).toISOString().slice(0, 16);
+          return label.slice(0, 16) === t;
+        });
+        return match ? Number(match.currentPrice || null) : null;
+      });
+
+      const ctx = document.getElementById('timelineChart').getContext('2d');
+
+      if (timelineChart) {
+        timelineChart.destroy();
+      }
+
+      timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Mark Price',
+              data: prices,
+              borderWidth: 2,
+              tension: 0.2,
+              pointRadius: 0
+            },
+            {
+              label: 'Customer Liquidation',
+              data: customerLiqLine,
+              borderDash: [6, 6],
+              borderWidth: 1.5,
+              pointRadius: 0
+            },
+            {
+              label: 'Binance Liquidation',
+              data: binanceLiqLine,
+              borderDash: [3, 5],
+              borderWidth: 1.5,
+              pointRadius: 0
+            },
+            {
+              label: 'Funding Points',
+              data: fundingMarkers,
+              showLine: false,
+              pointRadius: 4,
+              pointHoverRadius: 5
+            },
+            {
+              label: 'Liquidation Events',
+              data: liquidationMarkers,
+              showLine: false,
+              pointRadius: 5,
+              pointHoverRadius: 6
+            }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          responsive: true,
+          interaction: { mode: 'nearest', intersect: false },
+          plugins: {
+            legend: { position: 'top' }
+          },
+          scales: {
+            x: {
+              ticks: { maxTicksLimit: 8 }
+            },
+            y: {
+              beginAtZero: false
+            }
+          }
+        }
+      });
     }
 
     function render() {
@@ -1369,7 +1800,11 @@
 
       setValue('intFundingRevenue', money(rawFunding), 'neutral');
       setValue('intBinanceCost', money(runtime.actualBinanceFunding), runtime.actualBinanceFunding <= 0 ? 'positive' : 'negative');
-      setValue('nextFundingRevenue', `${money(nextEstimatedRevenue)} · gross ${money(nextContractFunding)} / est. Binance ${money(nextEstimatedBinanceFunding)}`, nextEstimatedRevenue >= 0 ? 'positive' : 'negative');
+      setValue(
+        'nextFundingRevenue',
+        `${money(nextEstimatedRevenue)} · gross ${money(nextContractFunding)} / est. Binance ${money(nextEstimatedBinanceFunding)}`,
+        nextEstimatedRevenue >= 0 ? 'positive' : 'negative'
+      );
       setValue('binanceLiqValue', money(runtime.binanceLiq), 'negative');
       setValue('intClientEquityAfterFees', money(estimatedClientEquityAfterFees), estimatedClientEquityAfterFees >= 0 ? 'positive' : 'negative');
       setValue('intGrossProfit', money(internalProfit), internalProfit >= 0 ? 'positive' : 'negative');
@@ -1381,6 +1816,7 @@
 
       renderFundingTable();
       renderSnapshotTable();
+      renderTimelineChart();
     }
 
     function markDirty(state = true) {
@@ -1451,184 +1887,6 @@
       config.overridePrice = document.getElementById('overridePrice').value.trim();
     }
 
-    function getGitHubHeaders(token) {
-      return {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28'
-      };
-    }
-
-    function saveTokenLocal(token) {
-      localStorage.setItem(GH_TOKEN_STORAGE_KEY, token);
-    }
-
-    function getSavedToken() {
-      return localStorage.getItem(GH_TOKEN_STORAGE_KEY) || '';
-    }
-
-    async function commitJsonFile(path, dataObject, message) {
-      const token = document.getElementById('ghToken').value.trim() || getSavedToken();
-      if (!token) throw new Error('GitHub token is required.');
-
-      const owner = config.ghOwner;
-      const repo = config.ghRepo;
-      const branch = config.ghBranch || 'main';
-
-      if (!owner || !repo) throw new Error('ghOwner and ghRepo must be defined in config.json');
-
-      saveTokenLocal(token);
-
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-      const headers = getGitHubHeaders(token);
-
-      const getRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { method: 'GET', headers });
-      if (!getRes.ok) {
-        const err = await getRes.text();
-        throw new Error(`Could not read ${path}: ${err}`);
-      }
-
-      const currentFile = await getRes.json();
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(dataObject, null, 2))));
-
-      const putRes = await fetch(apiUrl, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          message,
-          content,
-          sha: currentFile.sha,
-          branch
-        })
-      });
-
-      if (!putRes.ok) {
-        const err = await putRes.text();
-        throw new Error(`Commit failed for ${path}: ${err}`);
-      }
-
-      return await putRes.json();
-    }
-
-    async function queueHistoryCommit(message) {
-      saveQueue = saveQueue.then(() => commitJsonFile('history.json', historyData, message)).catch(console.error);
-      return saveQueue;
-    }
-
-    async function saveConfigAndCommit() {
-      readFormIntoConfig();
-      saveConfigLocal();
-      await commitJsonFile('config.json', config, 'Update config.json from CFG admin panel');
-      markDirty(false);
-    }
-
-    function addEventIfMissing(eventKey, eventObject) {
-      const exists = historyData.events.some(e => e.eventKey === eventKey);
-      if (!exists) historyData.events.push({ ...eventObject, eventKey });
-      return !exists;
-    }
-
-    async function maybeSendEmail(subject, message) {
-      if (!config.emailEnabled || !config.emailjs_publicKey || !config.emailjs_serviceId || !config.emailjs_templateId) return;
-      try {
-        emailjs.init({ publicKey: config.emailjs_publicKey });
-        await emailjs.send(config.emailjs_serviceId, config.emailjs_templateId, {
-          subject,
-          message,
-          to_email: 'mahmoudchatila974@gmail.com'
-        });
-      } catch (error) {
-        console.error('Email send failed', error);
-      }
-    }
-
-    async function showBrowserNotification(title, body) {
-      if (!('Notification' in window)) return;
-      if (Notification.permission === 'granted') {
-        new Notification(title, { body });
-      } else if (Notification.permission !== 'denied') {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          new Notification(title, { body });
-        }
-      }
-    }
-
-    async function checkLiquidationAndPersist() {
-      const price = runtime.currentPrice || 0;
-      const customerLiq = runtime.customerLiq || 0;
-      const binanceLiq = runtime.binanceLiq || 0;
-
-      const customerTriggered = price <= customerLiq && customerLiq > 0;
-      const binanceTriggered = price <= binanceLiq && binanceLiq > 0;
-
-      const banner = document.getElementById('liquidationBanner');
-      const adminBanner = document.getElementById('adminBanner');
-
-      if (customerTriggered || binanceTriggered) {
-        const lines = [];
-        if (customerTriggered) lines.push(`Customer liquidation threshold reached at ${money(price)}.`);
-        if (binanceTriggered) lines.push(`Binance liquidation estimate reached at ${money(price)}.`);
-
-        banner.classList.remove('hidden');
-        banner.classList.add('red');
-        banner.textContent = lines.join(' ');
-
-        adminBanner.classList.remove('hidden');
-        adminBanner.classList.add('red');
-        adminBanner.textContent = lines.join(' ');
-
-        const inserted = addEventIfMissing(`liq_${config.tradeId}_${new Date().toISOString().slice(0,16)}_${customerTriggered}_${binanceTriggered}`, {
-          type: 'liquidation_event',
-          tradeId: config.tradeId,
-          symbol: config.symbol,
-          currentPrice: price,
-          customerLiquidationPrice: customerLiq,
-          binanceLiquidationPrice: binanceLiq,
-          customerTriggered,
-          binanceTriggered,
-          time: new Date().toISOString()
-        });
-
-        if (inserted) {
-          await queueHistoryCommit('Save liquidation event');
-          await showBrowserNotification('CFG Liquidation Alert', lines.join(' '));
-          await maybeSendEmail('CFG Liquidation Alert', lines.join(' '));
-        }
-      } else {
-        banner.classList.add('hidden');
-        adminBanner.classList.add('hidden');
-        banner.textContent = '';
-        adminBanner.textContent = '';
-      }
-    }
-
-    async function rebuildMissedLiquidationsFromSnapshots() {
-      const snapshots = getSnapshotEvents();
-      if (!snapshots.length) return;
-
-      for (const snap of snapshots) {
-        const priceLow = Number(snap.low || 0);
-        const customerTriggered = priceLow <= Number(runtime.customerLiq || 0) && runtime.customerLiq > 0;
-        const binanceTriggered = priceLow <= Number(runtime.binanceLiq || 0) && runtime.binanceLiq > 0;
-        if (!customerTriggered && !binanceTriggered) continue;
-
-        addEventIfMissing(`liq_rebuild_${snap.openTime}_${customerTriggered}_${binanceTriggered}`, {
-          type: 'liquidation_event',
-          tradeId: config.tradeId,
-          symbol: config.symbol,
-          currentPrice: priceLow,
-          customerLiquidationPrice: runtime.customerLiq,
-          binanceLiquidationPrice: runtime.binanceLiq,
-          customerTriggered,
-          binanceTriggered,
-          rebuiltFromSnapshot: true,
-          sourceSnapshotOpenTime: snap.openTime,
-          time: new Date(snap.openTime).toISOString()
-        });
-      }
-    }
-
     async function refreshData() {
       try {
         document.getElementById('statusTrade').textContent = 'Refreshing';
@@ -1645,11 +1903,13 @@
         const source = getCurrentPriceSource();
         runtime.currentPrice = source.price;
 
-        await processFundingPeriods(runtime.currentPrice);
         await processPriceSnapshots();
+        await processFundingPeriods(runtime.currentPrice);
         computeFundingAccrualFromHistory();
+
         runtime.customerLiq = getCustomerLiquidationPrice();
         runtime.binanceLiq = getBinanceLiquidationEstimate();
+
         await rebuildMissedLiquidationsFromSnapshots();
         render();
         await checkLiquidationAndPersist();
@@ -1658,6 +1918,7 @@
       } catch (error) {
         document.getElementById('statusTrade').textContent = 'Live Feed Error';
         console.error(error);
+        showAdminBanner(`Refresh failed: ${error.message || 'Unknown error'}`, 'red');
       }
     }
 
@@ -1741,6 +2002,8 @@
         });
 
         if (inserted) {
+          syncState.unsavedEvents += 1;
+          setSyncState({ unsavedEvents: syncState.unsavedEvents });
           await queueHistoryCommit('Save invoice generation event');
         }
       }
@@ -1757,7 +2020,7 @@
       config.closedAt = new Date().toISOString();
       config.closePrice = c.price;
 
-      addEventIfMissing(`close_${config.tradeId}_${Date.now()}`, {
+      const inserted = addEventIfMissing(`close_${config.tradeId}_${Date.now()}`, {
         type: 'close_event',
         tradeId: config.tradeId,
         symbol: config.symbol,
@@ -1769,6 +2032,10 @@
         binanceLiquidationPrice: runtime.binanceLiq
       });
 
+      if (inserted) {
+        syncState.unsavedEvents += 1;
+      }
+
       await saveConfigAndCommit();
       await queueHistoryCommit('Save close event');
       await generateInvoicePdf(false);
@@ -1777,16 +2044,16 @@
         `Trade ${config.tradeId} has been marked closed at ${money(c.price)}. Final client payout estimate: ${money(c.estimatedClientEquityAfterFees)}.`
       );
       await refreshData();
-      alert('Position marked closed, invoice generated, and close data saved.');
+      showAdminBanner('Position marked closed, invoice generated, and close data saved.', 'green');
     }
 
     async function testEmail() {
       try {
         await maybeSendEmail('CFG Test Email', 'This is a test email from the CFG SOL Position Monitor.');
-        alert('Test email sent attempt completed.');
+        showAdminBanner('Test email sent attempt completed.', 'green');
       } catch (error) {
         console.error(error);
-        alert('Test email failed.');
+        showAdminBanner('Test email failed.', 'red');
       }
     }
 
@@ -1816,11 +2083,11 @@
       document.getElementById('saveConfigBtn').addEventListener('click', async () => {
         try {
           await saveConfigAndCommit();
-          alert('Changes saved and committed to GitHub successfully.');
+          showAdminBanner('Changes saved and committed to GitHub successfully.', 'green');
           await refreshData();
         } catch (error) {
           console.error(error);
-          alert(error.message || 'GitHub commit failed.');
+          showAdminBanner(error.message || 'GitHub commit failed.', 'red');
         }
       });
 
@@ -1856,12 +2123,20 @@
     async function init() {
       await loadConfig();
       await loadHistory();
+      initializeHistoryIfNeeded();
       bindForm();
       initActions();
       watchAdminFields();
 
       if (localStorage.getItem(ADMIN_SESSION_KEY) === 'open') {
         unlockAdmin();
+      }
+
+      if (syncState.unsavedEvents > 0) {
+        setSyncState({ unsavedEvents: syncState.unsavedEvents });
+        await queueHistoryCommit('Initialize history');
+      } else {
+        setSyncState({ state: 'Idle', unsavedEvents: 0, lastError: '' });
       }
 
       markDirty(false);
