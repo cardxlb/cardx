@@ -18053,6 +18053,17 @@
       "recoveredAt": "2026-03-28T11:55:32.354Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1774698932354"
+    },
+    {
+      "type": "open_event",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "openedAt": "2026-03-28T11:56:53.585Z",
+      "entryPrice": 82.98,
+      "deposit": 7000,
+      "leverage": 1.6,
+      "quantity": 134.97228247770548,
+      "eventKey": "open_CFG SOL Long 001_1774699013585"
     }
   ]
 }
