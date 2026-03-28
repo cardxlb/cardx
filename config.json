@@ -6,7 +6,7 @@
   "leverage": 1.9,
   "entryPrice": 75,
   "maintenanceMargin": 0.005,
-  "quantity": 93.33333,
+  "quantity": 177.33333333333334,
   "contractFundingRate": 0.0004,
   "exitFeeRate": 0.0155,
   "performanceFeeRate": 0.08,
@@ -22,7 +22,7 @@
   "emailjs_publicKey": "ZsowT__1MEjOCJQns",
   "emailjs_serviceId": "service_rdxi4r9",
   "emailjs_templateId": "template_ylp28ru",
-  "tradeStatus": "open",
-  "closedAt": "",
-  "closePrice": ""
+  "tradeStatus": "closed",
+  "closedAt": "2026-03-28T11:55:25.687Z",
+  "closePrice": 89
 }
