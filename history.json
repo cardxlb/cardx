@@ -18064,6 +18064,29 @@
       "leverage": 1.6,
       "quantity": 134.97228247770548,
       "eventKey": "open_CFG SOL Long 001_1774699013585"
+    },
+    {
+      "type": "price_snapshot_5m",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "openTime": 1774699200000,
+      "openTimeIso": "2026-03-28T12:00:00.000Z",
+      "closeTime": 1774699499999,
+      "closeTimeIso": "2026-03-28T12:04:59.999Z",
+      "open": 82.89,
+      "high": 82.92,
+      "low": 82.88995717,
+      "close": 82.9,
+      "savedAt": "2026-03-28T12:01:01.488Z",
+      "eventKey": "price_5m_SOLUSDT_1774699200000"
+    },
+    {
+      "type": "backfill_run",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "recoveredAt": "2026-03-28T12:01:01.489Z",
+      "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
+      "eventKey": "backfill_1774699261489"
     }
   ]
 }
