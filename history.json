@@ -17943,6 +17943,58 @@
       "recoveredAt": "2026-03-28T11:49:59.278Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1774698599278"
+    },
+    {
+      "type": "funding_period",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "fundingTime": 1774656000005,
+      "fundingTimeIso": "2026-03-28T00:00:00.005Z",
+      "fundingRate": -0.00028259,
+      "markPrice": 83.04,
+      "quantity": 93.33333,
+      "positionValueAtFunding": 7750.399723200001,
+      "contractFundingRate": 0.0004,
+      "contractFundingCharge": 3.1001598892800004,
+      "binanceFundingAmount": -2.190185457779088,
+      "cumulativeContractFunding": 54.88325963675952,
+      "cumulativeBinanceFunding": -13.589387421653267,
+      "snapshot5m": {
+        "openTime": 1774656000000,
+        "openTimeIso": "2026-03-28T00:00:00.000Z",
+        "open": 83.04,
+        "high": 83.04,
+        "low": 82.93383908,
+        "close": 82.98
+      },
+      "savedAt": "2026-03-28T11:50:02.274Z",
+      "eventKey": "funding_SOLUSDT_1774656000005"
+    },
+    {
+      "type": "funding_period",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "fundingTime": 1774684800005,
+      "fundingTimeIso": "2026-03-28T08:00:00.005Z",
+      "fundingRate": -0.00021298,
+      "markPrice": 83.55,
+      "quantity": 93.33333,
+      "positionValueAtFunding": 7797.9997215,
+      "contractFundingRate": 0.0004,
+      "contractFundingCharge": 3.1191998886000003,
+      "binanceFundingAmount": -1.6608179806850702,
+      "cumulativeContractFunding": 58.00245952535952,
+      "cumulativeBinanceFunding": -15.250205402338338,
+      "snapshot5m": {
+        "openTime": 1774684800000,
+        "openTimeIso": "2026-03-28T08:00:00.000Z",
+        "open": 83.55,
+        "high": 83.58,
+        "low": 83.46759269,
+        "close": 83.58
+      },
+      "savedAt": "2026-03-28T11:50:02.274Z",
+      "eventKey": "funding_SOLUSDT_1774684800005"
     }
   ]
 }
