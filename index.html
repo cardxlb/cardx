@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -565,6 +566,11 @@
           </div>
 
           <div class="metric-card">
+            <div class="metric-label">Initial Notional</div>
+            <div class="metric-value neutral" id="initialNotionalDisplay">—</div>
+          </div>
+
+          <div class="metric-card">
             <div class="metric-label">Entry Price</div>
             <div class="metric-value neutral" id="entryPriceValue">—</div>
           </div>
@@ -839,8 +845,13 @@
             </div>
 
             <div class="field">
-              <label for="quantity">Quantity</label>
-              <input id="quantity" type="number" step="0.00000001" />
+              <label for="initialNotional">Initial Notional</label>
+              <input id="initialNotional" type="number" step="0.01" readonly />
+            </div>
+
+            <div class="field">
+              <label for="quantity">SOL Quantity</label>
+              <input id="quantity" type="number" step="0.00000001" readonly />
             </div>
 
             <div class="field">
@@ -966,7 +977,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'cfg-sol-monitor-config-v7';
+    const STORAGE_KEY = 'cfg-sol-monitor-config-v8';
     const ADMIN_SESSION_KEY = 'cfg-sol-monitor-admin-open';
     const GH_TOKEN_STORAGE_KEY = 'cfg-sol-monitor-gh-token-v1';
 
@@ -1108,6 +1119,26 @@
 
     function getInitialNotional() {
       return Number(config.deposit || 0) * Number(config.leverage || 0);
+    }
+
+    function recalculateDerivedPositionFields() {
+      const deposit = Number(document.getElementById('deposit')?.value || config.deposit || 0);
+      const leverage = Number(document.getElementById('leverage')?.value || config.leverage || 0);
+      const entryPrice = Number(document.getElementById('entryPrice')?.value || config.entryPrice || 0);
+
+      const initialNotional = deposit * leverage;
+      const quantity = entryPrice > 0 ? initialNotional / entryPrice : 0;
+
+      const notionalEl = document.getElementById('initialNotional');
+      const qtyEl = document.getElementById('quantity');
+
+      if (notionalEl) notionalEl.value = initialNotional ? initialNotional.toFixed(2) : '';
+      if (qtyEl) qtyEl.value = quantity ? quantity.toFixed(8) : '';
+
+      config.deposit = deposit;
+      config.leverage = leverage;
+      config.entryPrice = entryPrice;
+      config.quantity = quantity;
     }
 
     function getPositionValue(price) {
@@ -1855,6 +1886,7 @@ async function maybeSendEmail(subject, message) {
 
       setValue('depositValue', money(config.deposit), 'neutral');
       setValue('leverageValue', `${number(config.leverage, 2)}x`, 'neutral');
+      setValue('initialNotionalDisplay', money(initialNotional), 'neutral');
       setValue('entryPriceValue', money(config.entryPrice), 'neutral');
       setValue('currentPriceValue', money(price), 'neutral');
       setValue('quantityValue', `${number(notionalOverEquity, 2)}x`, 'neutral');
@@ -1926,7 +1958,6 @@ async function maybeSendEmail(subject, message) {
       document.getElementById('deposit').value = config.deposit || 0;
       document.getElementById('leverage').value = config.leverage || 0;
       document.getElementById('maintenanceMargin').value = config.maintenanceMargin || 0;
-      document.getElementById('quantity').value = config.quantity || 0;
       document.getElementById('contractFundingRate').value = config.contractFundingRate || 0;
       document.getElementById('exitFeeRate').value = config.exitFeeRate || 0;
       document.getElementById('performanceFeeRate').value = config.performanceFeeRate || 0;
@@ -1936,6 +1967,8 @@ async function maybeSendEmail(subject, message) {
       document.getElementById('adminKey').value = config.adminKey || '';
       document.getElementById('overridePrice').value = config.overridePrice || '';
       document.getElementById('ghToken').value = getSavedToken();
+
+      recalculateDerivedPositionFields();
     }
 
     function readFormIntoConfig() {
@@ -1946,7 +1979,6 @@ async function maybeSendEmail(subject, message) {
       config.deposit = Number(document.getElementById('deposit').value || 0);
       config.leverage = Number(document.getElementById('leverage').value || 0);
       config.maintenanceMargin = Number(document.getElementById('maintenanceMargin').value || 0);
-      config.quantity = Number(document.getElementById('quantity').value || 0);
       config.contractFundingRate = Number(document.getElementById('contractFundingRate').value || 0);
       config.exitFeeRate = Number(document.getElementById('exitFeeRate').value || 0);
       config.performanceFeeRate = Number(document.getElementById('performanceFeeRate').value || 0);
@@ -1955,6 +1987,9 @@ async function maybeSendEmail(subject, message) {
       config.cashoutBasis = document.getElementById('cashoutBasis').value;
       config.adminKey = document.getElementById('adminKey').value;
       config.overridePrice = document.getElementById('overridePrice').value.trim();
+
+      const initialNotional = config.deposit * config.leverage;
+      config.quantity = config.entryPrice > 0 ? initialNotional / config.entryPrice : 0;
     }
 
     async function openNewPosition() {
@@ -2160,9 +2195,23 @@ async function testEmail() {
 
       const fields = form.querySelectorAll('input, select');
       fields.forEach((field) => {
-        field.addEventListener('input', () => markDirty(true));
+        field.addEventListener('input', async () => {
+          markDirty(true);
+
+          if (['deposit', 'leverage', 'entryPrice'].includes(field.id)) {
+            recalculateDerivedPositionFields();
+            render();
+          }
+        });
+
         field.addEventListener('change', async () => {
           markDirty(true);
+
+          if (['deposit', 'leverage', 'entryPrice'].includes(field.id)) {
+            recalculateDerivedPositionFields();
+            render();
+          }
+
           if (field.id === 'overridePrice') {
             await refreshData();
           }
