@@ -70418,6 +70418,17 @@
       "recoveredAt": "2026-04-09T13:11:32.101Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1775740292101"
+    },
+    {
+      "type": "invoice_generated",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "generatedAt": "2026-04-09T13:12:29.559Z",
+      "closePriceUsed": 82.15,
+      "finalClientPayout": 6499.399269323038,
+      "estimatedCfgProfit": 425.4966706230686,
+      "filename": "CFG_SOL_Long_001.pdf",
+      "eventKey": "invoice_CFG SOL Long 001_1775740349559"
     }
   ]
 }
