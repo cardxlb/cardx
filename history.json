@@ -77179,6 +77179,29 @@
       "recoveredAt": "2026-04-10T15:55:47.630Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1775836547630"
+    },
+    {
+      "type": "price_snapshot_5m",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "openTime": 1775836800000,
+      "openTimeIso": "2026-04-10T16:00:00.000Z",
+      "closeTime": 1775837099999,
+      "closeTimeIso": "2026-04-10T16:04:59.999Z",
+      "open": 84.2,
+      "high": 84.29052715,
+      "low": 84.2,
+      "close": 84.2770715,
+      "savedAt": "2026-04-10T16:00:52.371Z",
+      "eventKey": "price_5m_SOLUSDT_1775836800000"
+    },
+    {
+      "type": "backfill_run",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "recoveredAt": "2026-04-10T16:00:52.372Z",
+      "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
+      "eventKey": "backfill_1775836852372"
     }
   ]
 }
