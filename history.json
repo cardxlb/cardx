@@ -77087,6 +77087,29 @@
       "estimatedCfgProfit": 461.8736034847216,
       "filename": "CFG_SOL_Long_001.pdf",
       "eventKey": "invoice_CFG SOL Long 001_1775835432199"
+    },
+    {
+      "type": "price_snapshot_5m",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "openTime": 1775835600000,
+      "openTimeIso": "2026-04-10T15:40:00.000Z",
+      "closeTime": 1775835899999,
+      "closeTimeIso": "2026-04-10T15:44:59.999Z",
+      "open": 84.67051437,
+      "high": 84.67438919,
+      "low": 84.60574704,
+      "close": 84.62,
+      "savedAt": "2026-04-10T15:40:37.356Z",
+      "eventKey": "price_5m_SOLUSDT_1775835600000"
+    },
+    {
+      "type": "backfill_run",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "recoveredAt": "2026-04-10T15:40:37.357Z",
+      "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
+      "eventKey": "backfill_1775835637357"
     }
   ]
 }
