@@ -76975,6 +76975,84 @@
       "recoveredAt": "2026-04-10T15:34:11.191Z",
       "note": "Recovered 5-minute price backlog and/or funding backlog after reopening.",
       "eventKey": "backfill_1775835251191"
+    },
+    {
+      "type": "funding_period",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "fundingTime": 1775750400001,
+      "fundingTimeIso": "2026-04-09T16:00:00.001Z",
+      "fundingRate": 0.00002462,
+      "markPrice": 83.7,
+      "quantity": 134.97228247770548,
+      "positionValueAtFunding": 11297.180043383949,
+      "contractFundingRate": 0.0004,
+      "contractFundingCharge": 4.51887201735358,
+      "binanceFundingAmount": 0.2781365726681128,
+      "cumulativeContractFunding": 221.22902665189608,
+      "cumulativeBinanceFunding": -36.644797829933644,
+      "snapshot5m": {
+        "openTime": 1775750400000,
+        "openTimeIso": "2026-04-09T16:00:00.000Z",
+        "open": 83.7,
+        "high": 84.2,
+        "low": 83.7,
+        "close": 84.03676829
+      },
+      "savedAt": "2026-04-10T15:34:22.982Z",
+      "eventKey": "funding_SOLUSDT_1775750400001"
+    },
+    {
+      "type": "funding_period",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "fundingTime": 1775779200000,
+      "fundingTimeIso": "2026-04-10T00:00:00.000Z",
+      "fundingRate": 0.0001,
+      "markPrice": 83.28958469,
+      "quantity": 134.97228247770548,
+      "positionValueAtFunding": 11241.785352229454,
+      "contractFundingRate": 0.0004,
+      "contractFundingCharge": 4.496714140891782,
+      "binanceFundingAmount": 1.1241785352229454,
+      "cumulativeContractFunding": 225.72574079278786,
+      "cumulativeBinanceFunding": -35.5206192947107,
+      "snapshot5m": {
+        "openTime": 1775779200000,
+        "openTimeIso": "2026-04-10T00:00:00.000Z",
+        "open": 83.28958469,
+        "high": 83.31,
+        "low": 83.10620368,
+        "close": 83.13
+      },
+      "savedAt": "2026-04-10T15:34:22.983Z",
+      "eventKey": "funding_SOLUSDT_1775779200000"
+    },
+    {
+      "type": "funding_period",
+      "tradeId": "CFG SOL Long 001",
+      "symbol": "SOLUSDT",
+      "fundingTime": 1775808000005,
+      "fundingTimeIso": "2026-04-10T08:00:00.005Z",
+      "fundingRate": 0.000001,
+      "markPrice": 82.92255636,
+      "quantity": 134.97228247770548,
+      "positionValueAtFunding": 11192.246700795373,
+      "contractFundingRate": 0.0004,
+      "contractFundingCharge": 4.47689868031815,
+      "binanceFundingAmount": 0.011192246700795373,
+      "cumulativeContractFunding": 230.20263947310602,
+      "cumulativeBinanceFunding": -35.509427048009904,
+      "snapshot5m": {
+        "openTime": 1775808000000,
+        "openTimeIso": "2026-04-10T08:00:00.000Z",
+        "open": 82.92,
+        "high": 82.93,
+        "low": 82.80746991,
+        "close": 82.84
+      },
+      "savedAt": "2026-04-10T15:34:22.984Z",
+      "eventKey": "funding_SOLUSDT_1775808000005"
     }
   ]
 }
